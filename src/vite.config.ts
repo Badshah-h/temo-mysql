@@ -11,6 +11,8 @@ export default defineConfig({
       : process.env.VITE_BASE_PATH || "/",
   optimizeDeps: {
     entries: ["src/main.tsx", "src/tempobook/**/*"],
+    // Exclude server-side only packages
+    exclude: ["mysql2", "bcryptjs", "knex", "fs", "path", "dotenv", "express"],
   },
   plugins: [react(), tempo()],
   resolve: {
