@@ -5,6 +5,11 @@ import routes from "tempo-routes";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
+// Check if Tempo is enabled
+const isTempo = typeof import.meta !== 'undefined' &&
+  'env' in import.meta &&
+  import.meta.env.VITE_TEMPO === "true";
+
 // Lazy load admin and auth components
 const AdminDashboard = lazy(
   () => import("./components/admin/dashboard/AdminDashboard"),
@@ -67,11 +72,11 @@ function App() {
             />
 
             {/* Add Tempo routes for storyboards */}
-            {import.meta.env.VITE_TEMPO === "true" && (
+            {isTempo && (
               <Route path="/tempobook/*" />
             )}
           </Routes>
-          {import.meta.env.VITE_TEMPO === "true" && useRoutes(routes)}
+          {isTempo && useRoutes(routes)}
         </>
       </Suspense>
     </AuthProvider>

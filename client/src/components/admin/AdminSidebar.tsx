@@ -212,21 +212,14 @@ const AdminSidebar: React.FC = () => {
           />
 
           <SidebarItem
-            icon={<BrainCircuit className="h-5 w-5" />}
-            label="AI Models"
-            path="/admin/ai-models"
-            isActive={isActive("/admin/ai-models")}
+            icon={<FileCode2 className="h-5 w-5" />}
+            label="AI Logs"
+            path="/admin/logs"
+            isActive={isActive("/admin/logs")}
           />
 
           <SidebarItem
-            icon={<Users className="h-5 w-5" />}
-            label="User Management"
-            path="/admin/users"
-            isActive={isActive("/admin/users")}
-          />
-
-          <SidebarItem
-            icon={<Database className="h-5 w-5" />}
+            icon={<BarChart3 className="h-5 w-5" />}
             label="Analytics"
             path="/admin/analytics"
             isActive={isActive("/admin/analytics")}
@@ -238,15 +231,29 @@ const AdminSidebar: React.FC = () => {
             path="/admin/settings"
             isActive={isActive("/admin/settings")}
           />
+
+          <SidebarItem
+            icon={<Users className="h-5 w-5" />}
+            label="User Management"
+            path="/admin/users"
+            isActive={isActive("/admin/users")}
+          />
+
+          <SidebarItem
+            icon={<BrainCircuit className="h-5 w-5" />}
+            label="AI Configuration"
+            path="/admin/ai-config"
+            isActive={isActive("/admin/ai-config")}
+          />
         </nav>
       </div>
 
       <div className="p-4 border-t border-slate-700">
         <button
           onClick={handleLogout}
-          className="flex items-center gap-3 px-3 py-2 w-full rounded-md text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
+          className="flex w-full items-center gap-3 px-3 py-2 rounded-md text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition-colors"
         >
-          <LogOut className="h-5 w-5" />
+          <LogOut className="h-5 w-5 text-slate-400" />
           <span>Logout</span>
         </button>
       </div>

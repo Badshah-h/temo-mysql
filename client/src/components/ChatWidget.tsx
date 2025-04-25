@@ -9,22 +9,18 @@ import {
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardFooter, CardHeader } from "./ui/card";
+import { Input } from "./ui/input";
+import { Avatar, AvatarImage, AvatarFallback } from "./ui/avatar";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Badge } from "@/components/ui/badge";
+} from "./ui/tooltip";
+import { Badge } from "./ui/badge";
+import ChatMessageList from "./ChatMessageList";
 
 interface Message {
   id: string;
@@ -162,33 +158,6 @@ const ChatWidget = ({
     color: darkMode ? "#f3f4f6" : "#1f2937",
   } as React.CSSProperties;
 
-  // Simple message display component
-  const MessageDisplay = ({ message }: { message: Message }) => {
-    const isUser = message.sender === "user";
-    return (
-      <div className={`flex ${isUser ? "justify-end" : "justify-start"} mb-4`}>
-        {!isUser && (
-          <Avatar className="h-8 w-8 mr-2">
-            <AvatarImage src={botAvatar} alt={botName} />
-            <AvatarFallback>{botName.charAt(0)}</AvatarFallback>
-          </Avatar>
-        )}
-        <div
-          className={`px-4 py-2 rounded-lg max-w-[80%] ${isUser ? "bg-primary text-white ml-2" : "bg-gray-100 text-gray-800"}`}
-          style={isUser ? { backgroundColor: primaryColor } : {}}
-        >
-          {message.content}
-        </div>
-        {isUser && (
-          <Avatar className="h-8 w-8 ml-2">
-            <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=user" />
-            <AvatarFallback>You</AvatarFallback>
-          </Avatar>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div
       className={`fixed ${positionStyles[position]} z-50`}
@@ -235,42 +204,15 @@ const ChatWidget = ({
                 </Button>
               </CardHeader>
 
-              <CardContent className="p-4 flex-grow overflow-y-auto">
-                {messages.map((msg) => (
-                  <MessageDisplay key={msg.id} message={msg} />
-                ))}
-                {isTyping && (
-                  <div className="flex items-center">
-                    <Avatar className="h-8 w-8 mr-2">
-                      <AvatarImage src={botAvatar} alt={botName} />
-                      <AvatarFallback>{botName.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div className="bg-gray-100 px-4 py-2 rounded-lg">
-                      <div className="flex space-x-1">
-                        <div className="h-2 w-2 bg-gray-400 rounded-full animate-bounce" />
-                        <div className="h-2 w-2 bg-gray-400 rounded-full animate-bounce delay-100" />
-                        <div className="h-2 w-2 bg-gray-400 rounded-full animate-bounce delay-200" />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                {messages.length > 0 &&
-                  messages[messages.length - 1].followUps && (
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      {messages[messages.length - 1].followUps?.map(
-                        (followUp, index) => (
-                          <Button
-                            key={index}
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleFollowUp(followUp)}
-                          >
-                            {followUp}
-                          </Button>
-                        ),
-                      )}
-                    </div>
-                  )}
+              <CardContent className="p-0 flex-grow overflow-hidden">
+                <ChatMessageList
+                  messages={messages}
+                  isTyping={isTyping}
+                  onFollowUpClick={handleFollowUp}
+                  darkMode={darkMode}
+                  primaryColor={primaryColor}
+                  secondaryColor={secondaryColor}
+                />
                 <div ref={messageEndRef} />
               </CardContent>
 

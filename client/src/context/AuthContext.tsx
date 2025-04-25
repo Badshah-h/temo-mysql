@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { User } from "../types/auth";
-import { authApi } from "../api/authApi";
+import { User, verifyToken } from "../lib/auth";
 
 interface AuthContextType {
   user: User | null;
@@ -30,11 +29,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Check for token in localStorage on initial load
     const storedToken = localStorage.getItem("auth_token");
     if (storedToken) {
-      authApi
-        .getCurrentUser()
-        .then((data) => {
-          setUser(data.user);
-          setToken(storedToken);
+      verifyToken(storedToken)
+        .then((userData) => {
+          if (userData) {
+            setUser(userData);
+            setToken(storedToken);
+          } else {
+            // Token is invalid or expired
+            localStorage.removeItem("auth_token");
+          }
         })
         .catch(() => {
           localStorage.removeItem("auth_token");
@@ -54,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    authApi.logout();
+    localStorage.removeItem("auth_token");
     setToken(null);
     setUser(null);
   };

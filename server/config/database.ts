@@ -1,15 +1,27 @@
+// Database configuration
 import dotenv from "dotenv";
 import path from "path";
-import { fileURLToPath } from "url";
 
-// Get the directory name
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+
+// Define database configuration interface
+interface DbConfig {
+  host: string;
+  port: number;
+  user: string;
+  password: string;
+  database: string;
+  connectionLimit: number;
+  waitForConnections: boolean;
+  queueLimit: number;
+  connectTimeout: number;
+  acquireTimeout: number;
+  timezone: string;
+}
 
 // Load environment variables from .env file
-dotenv.config({ path: path.resolve(__dirname, "../../.env") });
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
-const dbConfig = {
+const dbConfig: DbConfig = {
   host: process.env.DB_HOST || "localhost",
   port: parseInt(process.env.DB_PORT || "3306", 10),
   user: process.env.DB_USER || "root",

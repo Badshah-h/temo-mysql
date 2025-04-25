@@ -1,14 +1,14 @@
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import pool from "./db.js";
+import pool from "./db";
 import dotenv from "dotenv";
+import crypto from "crypto";
 
 // Load environment variables
 dotenv.config();
 
 // Secret key for JWT signing
-const JWT_SECRET =
-  process.env.JWT_SECRET || "your-secret-key-should-be-at-least-32-chars";
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-should-be-at-least-32-chars";
 const JWT_EXPIRY = process.env.JWT_EXPIRY || "2h";
 
 // User types
@@ -44,7 +44,7 @@ export async function createUser(
     const hashedPassword = await hashPassword(password);
 
     const [result] = await pool.execute(
-      "INSERT INTO users (email, password, full_name, role) VALUES (?, ?, ?, ?)",
+      "INSERT INTO users (email, password_hash, full_name, role) VALUES (?, ?, ?, ?)",
       [email, hashedPassword, fullName, "user"],
     );
 
@@ -71,7 +71,7 @@ export async function findUserByEmail(
 ): Promise<UserWithPassword | null> {
   try {
     const [rows] = await pool.execute(
-      "SELECT id, email, password, full_name as fullName, role FROM users WHERE email = ?",
+      "SELECT id, email, password_hash as password, full_name as fullName, role FROM users WHERE email = ?",
       [email],
     );
 
@@ -88,22 +88,27 @@ export async function findUserByEmail(
   }
 }
 
-export async function generateToken(user: User): Promise<string> {
-  return jwt.sign(
-    {
+export function generateToken(user: User): string {
+  try {
+    // Create the payload
+    const payload = {
       sub: user.id.toString(),
       email: user.email,
       role: user.role,
       name: user.fullName,
-    },
-    JWT_SECRET,
-    { expiresIn: JWT_EXPIRY },
-  );
+    };
+
+    // Sign the token
+    return jwt.sign(payload, JWT_SECRET);
+  } catch (error) {
+    console.error("Error generating token:", error);
+    throw new Error("Failed to generate token");
+  }
 }
 
 export async function verifyToken(token: string): Promise<User | null> {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload;
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
 
     if (!decoded.sub || !decoded.email || !decoded.role) {
       return null;
@@ -126,34 +131,49 @@ export async function loginUser(
   password: string,
 ): Promise<{ user: User; token: string } | null> {
   try {
+    // Find user by email
     const user = await findUserByEmail(email);
-
     if (!user) {
+      console.log("User not found:", email);
       return null;
     }
 
+    // Verify password
     const passwordMatch = await comparePasswords(password, user.password);
-
     if (!passwordMatch) {
+      console.log("Password doesn't match for user:", email);
       return null;
     }
 
-    // Update last login timestamp
-    await pool.execute(
-      "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?",
-      [user.id],
-    );
+    try {
+      // Update last login timestamp
+      await pool.execute(
+        "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?",
+        [user.id],
+      );
+    } catch (dbError) {
+      // Non-critical error, just log it
+      console.error("Failed to update last login time:", dbError);
+    }
 
+    // Remove password from user object
     const { password: _, ...userWithoutPassword } = user;
-    const token = await generateToken(userWithoutPassword);
 
-    return {
-      user: userWithoutPassword,
-      token,
-    };
+    try {
+      // Generate JWT token
+      const token = generateToken(userWithoutPassword);
+
+      return {
+        user: userWithoutPassword,
+        token,
+      };
+    } catch (tokenError) {
+      console.error("Token generation failed:", tokenError);
+      throw new Error("Authentication failed: Unable to generate token");
+    }
   } catch (error) {
     console.error("Error logging in user:", error);
-    return null;
+    throw error; // Rethrow to be handled by the API route
   }
 }
 
@@ -184,9 +204,9 @@ export async function createRefreshToken(
 export async function verifyRefreshToken(token: string): Promise<User | null> {
   try {
     const [rows] = await pool.execute(
-      `SELECT u.id, u.email, u.full_name as fullName, u.role 
-       FROM refresh_tokens rt 
-       JOIN users u ON rt.user_id = u.id 
+      `SELECT u.id, u.email, u.full_name as fullName, u.role
+       FROM refresh_tokens rt
+       JOIN users u ON rt.user_id = u.id
        WHERE rt.token = ? AND rt.expires_at > CURRENT_TIMESTAMP AND rt.revoked = FALSE`,
       [token],
     );
