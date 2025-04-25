@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS widget_configs (
 -- Widget themes table
 CREATE TABLE IF NOT EXISTS widget_themes (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id VARCHAR(36) NOT NULL,
+  user_id INT NOT NULL,
   name VARCHAR(100) NOT NULL,
   primary_color VARCHAR(20) NOT NULL DEFAULT '#6366F1',
   secondary_color VARCHAR(20) NOT NULL DEFAULT '#4F46E5',
@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS widget_themes (
 -- Widget embed codes table
 CREATE TABLE IF NOT EXISTS widget_embeds (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id VARCHAR(36) NOT NULL,
+  user_id INT NOT NULL,
   widget_config_id INT NOT NULL,
   embed_key VARCHAR(64) NOT NULL UNIQUE,
   domain VARCHAR(255),

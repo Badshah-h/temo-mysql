@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 -- AI context rules table
 CREATE TABLE IF NOT EXISTS ai_context_rules (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id VARCHAR(36) NOT NULL,
+  user_id INT NOT NULL,
   name VARCHAR(100) NOT NULL,
   description TEXT,
   rule_json JSON NOT NULL,
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS ai_context_rules (
 -- Knowledge base articles table
 CREATE TABLE IF NOT EXISTS knowledge_base_articles (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id VARCHAR(36) NOT NULL,
+  user_id INT NOT NULL,
   title VARCHAR(255) NOT NULL,
   content TEXT NOT NULL,
   category VARCHAR(100),

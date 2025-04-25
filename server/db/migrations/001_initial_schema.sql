@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS roles (
 
 -- User roles junction table (for many-to-many relationship)
 CREATE TABLE IF NOT EXISTS user_roles (
-  user_id VARCHAR(36) NOT NULL,
+  user_id INT NOT NULL,
   role_id INT NOT NULL,
   assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id, role_id),
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS user_roles (
 -- Refresh tokens table
 CREATE TABLE IF NOT EXISTS refresh_tokens (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id VARCHAR(36) NOT NULL,
+  user_id INT NOT NULL,
   token VARCHAR(255) NOT NULL UNIQUE,
   expires_at TIMESTAMP NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 -- Audit log table for tracking important actions
 CREATE TABLE IF NOT EXISTS audit_logs (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id VARCHAR(36),
+  user_id INT,
   action VARCHAR(100) NOT NULL,
   entity VARCHAR(50) NOT NULL,
   entity_id VARCHAR(50),
