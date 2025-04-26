@@ -13,6 +13,7 @@ import setupDatabase from "./setupDb.js";
 import { authenticate } from "./middleware/auth.js";
 import authController from "./modules/auth/auth.controller.js";
 import tenantsRoutes from "./api/tenants";
+import aiConfigRoutes from "./routes/aiConfig.js";
 
 // Load environment variables directly
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
@@ -87,13 +88,11 @@ app.get("/api/db-test", async (_req: Request, res: Response) => {
     }
   } catch (error) {
     console.error("Database test error:", error);
-    res
-      .status(500)
-      .json({
-        status: "error",
-        message: "Database connection test failed",
-        error: String(error),
-      });
+    res.status(500).json({
+      status: "error",
+      message: "Database connection test failed",
+      error: String(error),
+    });
   }
 });
 

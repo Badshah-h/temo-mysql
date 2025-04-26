@@ -25,47 +25,85 @@ const AdminRoutes = () => {
   return (
     <Routes>
       {/* Dashboard */}
-      <Route path="/" element={<AdminDashboard />} />
+      <Route
+        path="/"
+        element={
+          <ComingSoon
+            title="Admin Dashboard"
+            description="The admin dashboard is under development."
+          />
+        }
+      />
 
       {/* Tutorials */}
-      <Route path="/tutorials" element={<Tutorials />} />
-      <Route path="/tutorials/getting-started" element={<GettingStarted />} />
-      <Route path="/tutorials/advanced" element={<AdvancedTutorials />} />
+      <Route path="/tutorials" element={<ComingSoon title="Tutorials" />} />
+      <Route
+        path="/tutorials/getting-started"
+        element={<ComingSoon title="Getting Started" />}
+      />
+      <Route
+        path="/tutorials/advanced"
+        element={<ComingSoon title="Advanced Tutorials" />}
+      />
 
       {/* Widget Configuration */}
-      <Route path="/widget-config" element={<WidgetConfig />} />
+      <Route
+        path="/widget-config"
+        element={<ComingSoon title="Widget Configuration" />}
+      />
 
       {/* Context Rules */}
-      <Route path="/context-rules" element={<ContextRules />} />
-      <Route path="/context-rules/create" element={<CreateContextRule />} />
-      <Route path="/context-rules/manage" element={<ManageContextRules />} />
-      <Route path="/context-rules/test" element={<TestContextRules />} />
+      <Route
+        path="/context-rules"
+        element={<ComingSoon title="Context Rules" />}
+      />
+      <Route
+        path="/context-rules/create"
+        element={<ComingSoon title="Create Context Rule" />}
+      />
+      <Route
+        path="/context-rules/manage"
+        element={<ComingSoon title="Manage Context Rules" />}
+      />
+      <Route
+        path="/context-rules/test"
+        element={<ComingSoon title="Test Context Rules" />}
+      />
 
       {/* Prompt Templates */}
-      <Route path="/templates" element={<PromptTemplates />} />
+      <Route
+        path="/templates"
+        element={<ComingSoon title="Prompt Templates" />}
+      />
 
       {/* Knowledge Base */}
-      <Route path="/knowledge-base" element={<KnowledgeBase />} />
+      <Route
+        path="/knowledge-base"
+        element={<ComingSoon title="Knowledge Base" />}
+      />
 
       {/* Embed Code */}
-      <Route path="/embed-code" element={<EmbedCode />} />
+      <Route path="/embed-code" element={<ComingSoon title="Embed Code" />} />
 
       {/* AI Logs */}
-      <Route path="/logs" element={<AILogs />} />
+      <Route path="/logs" element={<ComingSoon title="AI Logs" />} />
 
       {/* Analytics */}
-      <Route path="/analytics" element={<Analytics />} />
+      <Route path="/analytics" element={<ComingSoon title="Analytics" />} />
 
       {/* Settings */}
-      <Route path="/settings" element={<Settings />} />
+      <Route path="/settings" element={<ComingSoon title="Settings" />} />
 
       {/* User Management */}
-      <Route path="/users" element={<UserManagement />} />
-      <Route path="/roles" element={<RoleManagement />} />
-      <Route path="/permissions" element={<PermissionManagement />} />
+      <Route path="/users" element={<ComingSoon title="User Management" />} />
+      <Route path="/roles" element={<ComingSoon title="Role Management" />} />
+      <Route
+        path="/permissions"
+        element={<ComingSoon title="Permission Management" />}
+      />
 
       {/* AI Configuration */}
-      <Route path="/ai-config" element={<AIConfig />} />
+      <Route path="/ai-config" element={<AIConfigDashboard />} />
 
       {/* Tenant Settings */}
       <Route path="/tenant-settings" element={<TenantSettingsPage />} />
