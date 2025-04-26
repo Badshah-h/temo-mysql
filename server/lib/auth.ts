@@ -8,7 +8,8 @@ import crypto from "crypto";
 dotenv.config();
 
 // Secret key for JWT signing
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key-should-be-at-least-32-chars";
+const JWT_SECRET =
+  process.env.JWT_SECRET || "your-secret-key-should-be-at-least-32-chars";
 const JWT_EXPIRY = process.env.JWT_EXPIRY || "2h";
 
 // User types

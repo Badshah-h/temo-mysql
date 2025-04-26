@@ -1,5 +1,11 @@
 import express from "express";
-import { createUser, loginUser, verifyToken, generateToken } from "../lib/auth.js";
+import {
+  createUser,
+  loginUser,
+  verifyToken,
+  generateToken,
+  comparePasswords,
+} from "../lib/auth.js";
 import pool from "../lib/db.js";
 
 const router = express.Router();
@@ -35,7 +41,9 @@ router.post("/register", async (req, res) => {
     const loginResult = await loginUser(email, password);
 
     if (!loginResult) {
-      return res.status(500).json({ message: "Failed to generate login token" });
+      return res
+        .status(500)
+        .json({ message: "Failed to generate login token" });
     }
 
     res.status(201).json({
@@ -67,12 +75,12 @@ router.post("/login", async (req, res) => {
     }
 
     // For development/testing purposes only - allow admin login without database check
-    if (email === 'admin@example.com' && password === 'admin123') {
+    if (email === "admin@example.com" && password === "admin123") {
       const adminUser = {
         id: 1,
-        email: 'admin@example.com',
-        fullName: 'Admin User',
-        role: 'admin'
+        email: "admin@example.com",
+        fullName: "Admin User",
+        role: "admin",
       };
 
       try {
@@ -108,13 +116,18 @@ router.post("/login", async (req, res) => {
       console.error("Login process error:", error);
 
       // Check if it's a token generation error
-      if (error.message && typeof error.message === 'string' &&
-          error.message.includes("Unable to generate token")) {
+      if (
+        error.message &&
+        typeof error.message === "string" &&
+        error.message.includes("Unable to generate token")
+      ) {
         return res.status(500).json({ message: "Authentication system error" });
       }
 
       // Default error
-      return res.status(500).json({ message: "Login failed due to server error" });
+      return res
+        .status(500)
+        .json({ message: "Login failed due to server error" });
     }
   } catch (error) {
     console.error("Login endpoint error:", error);
