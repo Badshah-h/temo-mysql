@@ -1,33 +1,3 @@
-import express, { Request, Response, NextFunction } from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import path from "path";
-import { testConnection } from "./lib/db";
-import authRoutes from "./api/auth";
-import userRoutes from "./api/users";
-import setupDatabase from "./setupDb";
-import { authenticate } from "./middleware/auth";
-
-// Load environment variables directly
-dotenv.config({ path: path.resolve(process.cwd(), ".env") });
-
-// Initialize Express app
-const app = express();
-const PORT = process.env.PORT || 3001;
-
-// Initialize database
-setupDatabase().catch((err: Error) => {
-  console.error("Failed to set up database:", err);
-  // Don't exit process, allow server to start anyway
-  console.log("Server will start, but database functionality may be limited.");
-});
-
-// Middleware
-app.use(cors());
-app.use(express.json());
-
-// Test database connection
-testConnection()
   .then((connected: boolean) => {
     if (!connected) {
       console.error("Database connection failed. Server will start, but functionality may be limited.");

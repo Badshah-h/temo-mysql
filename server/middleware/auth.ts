@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyToken } from "../lib/auth.js";
+import { PermissionModel } from "../db/models/Permission.js";
 
 // Extend Express Request type to include user
 declare global {
@@ -55,5 +56,83 @@ export const checkRole = (roles: string | string[]) => {
     }
 
     next();
+  };
+};
+
+// Middleware to check user permission
+export const checkPermission = (requiredPermissions: string | string[]) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const userId = req.user.id;
+    const permissions = Array.isArray(requiredPermissions)
+      ? requiredPermissions
+      : [requiredPermissions];
+
+    try {
+      // Special case for admin role - always grant access
+      if (req.user.role === "admin") {
+        return next();
+      }
+
+      // Check each required permission
+      for (const permission of permissions) {
+        const hasPermission = await PermissionModel.userHasPermission(
+          userId,
+          permission,
+        );
+        if (!hasPermission) {
+          return res.status(403).json({
+            message: "Access denied: you don't have the required permissions",
+            requiredPermission: permission,
+          });
+        }
+      }
+
+      next();
+    } catch (error) {
+      console.error("Permission check error:", error);
+      return res.status(500).json({ message: "Error checking permissions" });
+    }
+  };
+};
+
+// Middleware to check if user has any of the specified permissions
+export const checkAnyPermission = (permissions: string[]) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+
+    const userId = req.user.id;
+
+    try {
+      // Special case for admin role - always grant access
+      if (req.user.role === "admin") {
+        return next();
+      }
+
+      // Check if user has any of the permissions
+      for (const permission of permissions) {
+        const hasPermission = await PermissionModel.userHasPermission(
+          userId,
+          permission,
+        );
+        if (hasPermission) {
+          return next();
+        }
+      }
+
+      return res.status(403).json({
+        message:
+          "Access denied: you don't have any of the required permissions",
+        requiredPermissions: permissions,
+      });
+    } catch (error) {
+      console.error("Permission check error:", error);
+      return res.status(500).json({ message: "Error checking permissions" });
+    }
   };
 };
