@@ -2,6 +2,7 @@ import express from "express";
 import { authenticate, checkPermission } from "../middleware/auth.js";
 import { RoleModel } from "../db/models/Role.js";
 import { PermissionModel } from "../db/models/Permission.js";
+import pool from "../lib/db.js";
 
 const router = express.Router();
 
@@ -212,7 +213,7 @@ router.post(
       }
 
       // First remove all existing permissions
-      await pool.execute("DELETE FROM role_permissions WHERE role_id = ?", [
+      await pool.query("DELETE FROM role_permissions WHERE role_id = ?", [
         roleId,
       ]);
 

@@ -1,5 +1,9 @@
 import express from "express";
-import { authenticate, checkPermission } from "../middleware/auth.js";
+import {
+  authenticate,
+  checkPermission,
+  checkRole,
+} from "../middleware/auth.js";
 import { PermissionModel } from "../db/models/Permission.js";
 
 const router = express.Router();
@@ -137,11 +141,9 @@ router.put("/:id", authenticate, checkRole("admin"), async (req, res) => {
         permissionWithSameName &&
         permissionWithSameName.id !== permissionId
       ) {
-        return res
-          .status(409)
-          .json({
-            message: "Another permission with this name already exists",
-          });
+        return res.status(409).json({
+          message: "Another permission with this name already exists",
+        });
       }
     }
 
