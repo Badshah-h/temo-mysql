@@ -237,7 +237,29 @@ const AdminSidebar: React.FC = () => {
             label="User Management"
             path="/admin/users"
             isActive={isActive("/admin/users")}
-          />
+            hasSubmenu={true}
+            isSubmenuOpen={openSubmenu === "users"}
+            onToggleSubmenu={() => toggleSubmenu("users")}
+          >
+            <SidebarItem
+              icon={<Users className="h-4 w-4" />}
+              label="Users"
+              path="/admin/users"
+              isActive={isActive("/admin/users")}
+            />
+            <SidebarItem
+              icon={<Shield className="h-4 w-4" />}
+              label="Roles"
+              path="/admin/roles"
+              isActive={isActive("/admin/roles")}
+            />
+            <SidebarItem
+              icon={<Shield className="h-4 w-4" />}
+              label="Permissions"
+              path="/admin/permissions"
+              isActive={isActive("/admin/permissions")}
+            />
+          </SidebarItem>
 
           <SidebarItem
             icon={<BrainCircuit className="h-5 w-5" />}

@@ -82,6 +82,22 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/admin/roles"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminRoles />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/permissions"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminPermissions />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Add Tempo routes for storyboards */}
             {isTempo && <Route path="/tempobook/*" />}
