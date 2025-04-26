@@ -1,3 +1,26 @@
+import express, { Request, Response, NextFunction } from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import path from "path";
+import { testConnection } from "./lib/db.js";
+import authRoutes from "./api/auth.js";
+import userRoutes from "./api/users.js";
+import { authenticate } from "./middleware/auth.js";
+
+// Load environment variables
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
+
+// Configure Express
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Test database connection
+testConnection()
   .then((connected: boolean) => {
     if (!connected) {
       console.error("Database connection failed. Server will start, but functionality may be limited.");
