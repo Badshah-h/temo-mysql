@@ -1,107 +1,125 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { User, verifyToken } from "../lib/auth";
+import { authApi } from "../api/authApi";
+
+interface Role {
+  id: number;
+  name: string;
+  description?: string;
+}
+
+interface Permission {
+  id: number;
+  name: string;
+  description?: string;
+}
+
+interface User {
+  id: number;
+  email: string;
+  fullName: string;
+  role: string;
+  roles?: Role[];
+  permissions?: Permission[];
+}
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  isLoading: boolean;
   isAdmin: boolean;
   hasRole: (role: string) => boolean;
   hasPermission: (permission: string) => boolean;
-  login: (token: string, user: User) => void;
+  login: (email: string, password: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    fullName: string,
+  ) => Promise<void>;
   logout: () => void;
+  updateProfile: (data: {
+    fullName?: string;
+    email?: string;
+    currentPassword?: string;
+    newPassword?: string;
+  }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-}
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  // Function to load auth state from localStorage
-  const loadAuthState = async () => {
-    setIsLoading(true);
+  useEffect(() => {
+    // Check if user is already logged in
+    const storedToken = localStorage.getItem("token");
+    if (storedToken) {
+      setToken(storedToken);
+      fetchCurrentUser(storedToken);
+    } else {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchCurrentUser = async (authToken: string) => {
     try {
-      const storedToken = localStorage.getItem("auth_token");
-      if (storedToken) {
-        // First check if token is valid on client side
-        const userData = await verifyToken(storedToken);
-        if (userData) {
-          // Then verify with server
-          try {
-            const response = await fetch("/api/auth/me", {
-              headers: { Authorization: `Bearer ${storedToken}` },
-            });
-
-            if (response.ok) {
-              const data = await response.json();
-              setUser(data.user);
-              setToken(storedToken);
-            } else {
-              throw new Error("Server token verification failed");
-            }
-          } catch (serverError) {
-            console.error("Server verification failed:", serverError);
-            localStorage.removeItem("auth_token");
-            setUser(null);
-            setToken(null);
-          }
-        } else {
-          // Token is invalid or expired
-          localStorage.removeItem("auth_token");
-          setUser(null);
-          setToken(null);
-        }
-      }
+      const userData = await authApi.getCurrentUser(authToken);
+      setUser(userData);
     } catch (error) {
-      console.error("Error loading auth state:", error);
-      localStorage.removeItem("auth_token");
-      setUser(null);
-      setToken(null);
+      console.error("Failed to fetch current user:", error);
+      logout();
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    loadAuthState();
-
-    // Add event listener for storage changes (for multi-tab support)
-    window.addEventListener("storage", (event) => {
-      if (event.key === "auth_token") {
-        if (event.newValue) {
-          loadAuthState();
-        } else {
-          // Token was removed in another tab
-          setUser(null);
-          setToken(null);
-        }
-      }
-    });
-
-    return () => {
-      window.removeEventListener("storage", () => {});
-    };
-  }, []);
-
-  const login = (newToken: string, userData: User) => {
-    localStorage.setItem("auth_token", newToken);
-    setToken(newToken);
+  const login = async (email: string, password: string) => {
+    const { token: authToken, user: userData } = await authApi.login(
+      email,
+      password,
+    );
+    localStorage.setItem("token", authToken);
+    setToken(authToken);
     setUser(userData);
   };
 
+  const register = async (
+    email: string,
+    password: string,
+    fullName: string,
+  ) => {
+    const { token: authToken, user: userData } = await authApi.register(
+      email,
+      password,
+      fullName,
+    );
+    localStorage.setItem("token", authToken);
+    setToken(authToken);
+    setUser(userData);
+  };
+
+  const updateProfile = async (data: {
+    fullName?: string;
+    email?: string;
+    currentPassword?: string;
+    newPassword?: string;
+  }) => {
+    if (!token) throw new Error("Not authenticated");
+
+    const { user: updatedUser } = await authApi.updateProfile(token, data);
+    setUser(updatedUser);
+  };
+
   const logout = () => {
-    localStorage.removeItem("auth_token");
+    if (token) {
+      // Try to notify the server, but don't wait for response
+      authApi.logout(token).catch((err) => console.error("Logout error:", err));
+    }
+
+    localStorage.removeItem("token");
     setToken(null);
     setUser(null);
   };
@@ -126,9 +144,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return false;
 
     // Admin has all permissions
-    if (user.role === "admin" || hasRole("admin")) return true;
+    if (hasRole("admin")) return true;
 
-    // Check direct permissions if available
+    // Check permissions if available
     if (user.permissions && user.permissions.length > 0) {
       return user.permissions.some(
         (permission) => permission.name === permissionName,
@@ -144,17 +162,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     token,
     isAuthenticated: !!user,
-    isLoading,
     isAdmin,
     hasRole,
     hasPermission,
     login,
+    register,
     logout,
+    updateProfile,
   };
 
-  if (isLoading) {
+  if (loading) {
     return <div>Loading...</div>;
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};

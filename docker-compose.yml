@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # MySQL database
+  db:
+    image: mysql:8.0
+    container_name: chat-widget-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - app-network
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend API server
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: chat-widget-server
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRY=${JWT_EXPIRY}
+      - AI_API_KEY=${AI_API_KEY}
+      - AI_ENDPOINT=${AI_ENDPOINT}
+      - AI_MODEL=${AI_MODEL}
+      - WIDGET_URL=${WIDGET_URL}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+    ports:
+      - "3001:3001"
+    networks:
+      - app-network
+    volumes:
+      - server-logs:/app/logs
+
+  # Frontend client
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    container_name: chat-widget-client
+    restart: unless-stopped
+    depends_on:
+      - server
+    ports:
+      - "80:80"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  server-logs:

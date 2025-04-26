@@ -2,6 +2,8 @@ export interface Role {
   id: number;
   name: string;
   description?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface Permission {
@@ -9,28 +11,30 @@ export interface Permission {
   name: string;
   description?: string;
   category?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface User {
   id: number;
   email: string;
   fullName: string;
-  role: string;
-  roles?: Role[];
-  permissions?: Permission[];
+  role?: string; // Primary role (for backward compatibility)
+  roles?: Role[]; // All roles assigned to the user
+  permissions?: Permission[]; // All permissions the user has through roles
+  lastLogin?: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
-export interface UserWithPassword extends User {
-  password: string;
+export interface LoginResponse {
+  message: string;
+  token: string;
+  user: User;
 }
 
-export interface AuthState {
-  user: User | null;
-  token: string | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  hasRole: (role: string) => boolean;
-  hasPermission: (permission: string) => boolean;
-  login: (token: string, user: User) => void;
-  logout: () => void;
+export interface RegisterResponse {
+  message: string;
+  token: string;
+  user: User;
 }

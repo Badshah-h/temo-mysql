@@ -1,111 +1,99 @@
 import axios from "axios";
-import { User } from "../types/auth";
 
-// Create an axios instance with base URL
-const api = axios.create({
-  baseURL: "/api",
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
+interface LoginResponse {
+  token: string;
+  user: {
+    id: number;
+    email: string;
+    fullName: string;
+    role: string;
+    roles?: Array<{ id: number; name: string; description?: string }>;
+  };
+}
 
-// Add token to requests if available
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("auth_token");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+interface RegisterResponse {
+  token: string;
+  user: {
+    id: number;
+    email: string;
+    fullName: string;
+    role: string;
+    roles?: Array<{ id: number; name: string; description?: string }>;
+  };
+}
 
-// Auth API endpoints
+interface UserResponse {
+  id: number;
+  email: string;
+  fullName: string;
+  role: string;
+  roles?: Array<{ id: number; name: string; description?: string }>;
+  permissions?: Array<{ id: number; name: string; description?: string }>;
+}
+
 export const authApi = {
-  login: async (email: string, password: string) => {
-    try {
-      const response = await api.post("/auth/login", { email, password });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+  login: async (email: string, password: string): Promise<LoginResponse> => {
+    const response = await axios.post("/api/auth/login", {
+      email,
+      password,
+    });
+    return response.data;
   },
 
   register: async (
-    fullName: string,
     email: string,
     password: string,
-    role?: string,
-  ) => {
-    try {
-      const response = await api.post("/auth/register", {
-        fullName,
-        email,
-        password,
-        role, // Optional role parameter
-      });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    fullName: string,
+  ): Promise<RegisterResponse> => {
+    const response = await axios.post("/api/auth/register", {
+      email,
+      password,
+      fullName,
+    });
+    return response.data;
   },
 
-  logout: async () => {
-    try {
-      await api.post("/auth/logout");
-      localStorage.removeItem("auth_token");
-    } catch (error) {
-      console.error("Logout error:", error);
-      // Still remove the token even if the API call fails
-      localStorage.removeItem("auth_token");
-    }
+  getCurrentUser: async (token: string): Promise<UserResponse> => {
+    const response = await axios.get("/api/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
   },
 
-  refreshToken: async () => {
-    try {
-      const response = await api.post("/auth/refresh-token");
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+  updateProfile: async (
+    token: string,
+    data: {
+      fullName?: string;
+      email?: string;
+      currentPassword?: string;
+      newPassword?: string;
+    },
+  ): Promise<{ message: string; user: UserResponse }> => {
+    const response = await axios.put("/api/auth/profile", data, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.data;
   },
 
-  getCurrentUser: async (): Promise<{ user: User }> => {
-    try {
-      const response = await api.get("/auth/me");
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+  logout: async (token: string): Promise<{ message: string }> => {
+    const response = await axios.post(
+      "/api/auth/logout",
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+    return response.data;
   },
 
-  // Get user roles
-  getUserRoles: async (userId: number): Promise<any> => {
-    try {
-      const response = await api.get(`/users/${userId}/roles`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  // Assign role to user
-  assignRole: async (userId: number, roleId: number): Promise<any> => {
-    try {
-      const response = await api.post(`/users/${userId}/roles`, { roleId });
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
-  },
-
-  // Remove role from user
-  removeRole: async (userId: number, roleId: number): Promise<any> => {
-    try {
-      const response = await api.delete(`/users/${userId}/roles/${roleId}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+  checkEmail: async (email: string): Promise<{ exists: boolean }> => {
+    const response = await axios.get(`/api/auth/check-email/${email}`);
+    return response.data;
   },
 };
-
-export default api;

@@ -1,191 +1,183 @@
 import express from "express";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { db } from "../lib/db";
 import { authenticate } from "../middleware/auth";
-import { verifyToken, generateToken, comparePasswords } from "../lib/auth.js";
-import { UserModel } from "../db/models/User.js";
-import { RoleModel } from "../db/models/Role.js";
-import pool from "../lib/db.js";
 
 const router = express.Router();
 
-// Register endpoint
+// Register a new user
 router.post("/register", async (req, res) => {
   try {
-    const { email, password, fullName, role } = req.body;
-
-    // Validate input
-    if (!email || !password || !fullName) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
+    const { email, password, fullName } = req.body;
 
     // Check if user already exists
-    const existingUser = await UserModel.findByEmail(email);
+    const existingUser = await db("users").where("email", email).first();
     if (existingUser) {
-      return res.status(409).json({ message: "User already exists" });
+      return res.status(400).json({ message: "User already exists" });
     }
 
-    // Create new user with role
-    const userData = {
-      email,
-      password,
-      fullName,
-      role: role || "user", // Default to 'user' if not specified
-    };
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await UserModel.create(userData);
+    // Begin transaction
+    const trx = await db.transaction();
 
-    if (!user) {
-      return res.status(500).json({ message: "Failed to create user" });
+    try {
+      // Create user
+      const [userId] = await trx("users").insert({
+        email,
+        password: hashedPassword,
+        full_name: fullName,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+
+      // Get default role (user)
+      const userRole = await trx("roles").where("name", "user").first();
+
+      if (userRole) {
+        // Assign default role to user
+        await trx("user_roles").insert({
+          user_id: userId,
+          role_id: userRole.id,
+          created_at: new Date(),
+        });
+      }
+
+      // Commit transaction
+      await trx.commit();
+
+      // Get user roles for response
+      const userRoles = await db("user_roles")
+        .select("roles.id", "roles.name", "roles.description")
+        .join("roles", "user_roles.role_id", "roles.id")
+        .where("user_roles.user_id", userId);
+
+      // Generate JWT token
+      const token = jwt.sign(
+        {
+          id: userId,
+          email,
+          role: userRoles.length > 0 ? userRoles[0].name : "user",
+        },
+        process.env.JWT_SECRET || "your-secret-key",
+        { expiresIn: "24h" },
+      );
+
+      res.status(201).json({
+        message: "User registered successfully",
+        token,
+        user: {
+          id: userId,
+          email,
+          fullName,
+          role: userRoles.length > 0 ? userRoles[0].name : "user",
+          roles: userRoles,
+        },
+      });
+    } catch (error) {
+      // Rollback transaction on error
+      await trx.rollback();
+      throw error;
     }
-
-    // Get user with roles for response
-    const userWithRoles = await UserModel.findByIdWithRolesAndPermissions(
-      user.id,
-    );
-
-    // Generate token
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      fullName: user.fullName,
-      role: user.role,
-    });
-
-    res.status(201).json({
-      message: "User registered successfully",
-      user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.fullName,
-        role: user.role,
-        roles: userWithRoles?.roles || [],
-      },
-      token,
-    });
   } catch (error) {
     console.error("Registration error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(500).json({ message: "Registration failed" });
   }
 });
 
-// Login endpoint
+// Login user
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Validate input
-    if (!email || !password) {
-      return res
-        .status(400)
-        .json({ message: "Email and password are required" });
+    // Find user
+    const user = await db("users").where("email", email).first();
+    if (!user) {
+      return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Admin users must be properly authenticated through the database
+    // Check password
+    const validPassword = await bcrypt.compare(password, user.password);
+    if (!validPassword) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
 
-    try {
-      // Find user by email
-      const user = await UserModel.findByEmail(email);
-      if (!user) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
+    // Get user roles
+    const userRoles = await db("user_roles")
+      .select("roles.id", "roles.name", "roles.description")
+      .join("roles", "user_roles.role_id", "roles.id")
+      .where("user_roles.user_id", user.id);
 
-      // Get user with password for verification
-      const [rows] = await pool.execute(
-        "SELECT password FROM users WHERE id = ?",
-        [user.id],
-      );
-      const userWithPassword = rows[0] as { password: string };
+    // Update last login timestamp
+    await db("users").where("id", user.id).update({ last_login: db.fn.now() });
 
-      // Check password
-      const validPassword = await comparePasswords(
-        password,
-        userWithPassword.password,
-      );
-      if (!validPassword) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      // Get user with roles and permissions
-      const userWithRoles = await UserModel.findByIdWithRolesAndPermissions(
-        user.id,
-      );
-
-      // Update last login timestamp
-      await UserModel.updateLastLogin(user.id);
-
-      // Generate JWT token
-      const token = generateToken({
+    // Generate JWT token
+    const token = jwt.sign(
+      {
         id: user.id,
         email: user.email,
-        fullName: user.fullName,
-        role: user.role,
-      });
-
-      // Login successful
-      return res.json({
-        message: "Login successful",
-        user: {
-          id: user.id,
-          email: user.email,
-          fullName: user.fullName,
-          role: user.role,
-          roles: userWithRoles?.roles || [],
-        },
-        token,
-      });
-    } catch (error: any) {
-      console.error("Login process error:", error);
-
-      // Check if it's a token generation error
-      if (
-        error.message &&
-        typeof error.message === "string" &&
-        error.message.includes("Unable to generate token")
-      ) {
-        return res.status(500).json({ message: "Authentication system error" });
-      }
-
-      // Default error
-      return res
-        .status(500)
-        .json({ message: "Login failed due to server error" });
-    }
-  } catch (error) {
-    console.error("Login endpoint error:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
-});
-
-// Get current user endpoint
-router.get("/me", authenticate, async (req, res) => {
-  try {
-    const userWithRoles = await UserModel.findByIdWithRolesAndPermissions(
-      req.user.id,
+        role: userRoles.length > 0 ? userRoles[0].name : "user",
+      },
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "24h" },
     );
 
-    if (!userWithRoles) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
     res.json({
+      token,
       user: {
-        id: userWithRoles.id,
-        email: userWithRoles.email,
-        fullName: userWithRoles.fullName,
-        role: userWithRoles.role,
-        roles: userWithRoles.roles || [],
-        permissions: userWithRoles.permissions || [],
+        id: user.id,
+        email: user.email,
+        fullName: user.full_name,
+        role: userRoles.length > 0 ? userRoles[0].name : "user",
+        roles: userRoles,
       },
     });
   } catch (error) {
-    console.error("Get current user error:", error);
-    res.status(500).json({ message: "Internal server error" });
+    console.error("Login error:", error);
+    res.status(500).json({ message: "Login failed" });
   }
 });
 
-// Logout endpoint
-router.post("/logout", (_req, res) => {
-  // Client-side will handle token removal
-  res.json({ message: "Logged out successfully" });
+// Get current user
+router.get("/me", authenticate, async (req, res) => {
+  try {
+    const user = await db("users").where("id", req.user.id).first();
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Get user roles
+    const userRoles = await db("user_roles")
+      .select("roles.id", "roles.name", "roles.description")
+      .join("roles", "user_roles.role_id", "roles.id")
+      .where("user_roles.user_id", user.id);
+
+    // Get user permissions through roles
+    const userPermissions = await db("permissions")
+      .distinct("permissions.id", "permissions.name", "permissions.description")
+      .join(
+        "role_permissions",
+        "permissions.id",
+        "role_permissions.permission_id",
+      )
+      .join("user_roles", "role_permissions.role_id", "user_roles.role_id")
+      .where("user_roles.user_id", user.id);
+
+    res.json({
+      id: user.id,
+      email: user.email,
+      fullName: user.full_name,
+      role: userRoles.length > 0 ? userRoles[0].name : "user",
+      roles: userRoles,
+      permissions: userPermissions,
+    });
+  } catch (error) {
+    console.error("Get current user error:", error);
+    res.status(500).json({ message: "Failed to get user information" });
+  }
 });
 
 export default router;
