@@ -1,11 +1,8 @@
 import express from "express";
-import {
-  createUser,
-  loginUser,
-  verifyToken,
-  generateToken,
-  comparePasswords,
-} from "../lib/auth.js";
+import { authenticate } from "../middleware/auth";
+import { verifyToken, generateToken, comparePasswords } from "../lib/auth.js";
+import { UserModel } from "../db/models/User.js";
+import { RoleModel } from "../db/models/Role.js";
 import pool from "../lib/db.js";
 
 const router = express.Router();
@@ -13,7 +10,7 @@ const router = express.Router();
 // Register endpoint
 router.post("/register", async (req, res) => {
   try {
-    const { email, password, fullName } = req.body;
+    const { email, password, fullName, role } = req.body;
 
     // Validate input
     if (!email || !password || !fullName) {
@@ -21,30 +18,37 @@ router.post("/register", async (req, res) => {
     }
 
     // Check if user already exists
-    const [existingUsers] = await pool.execute(
-      "SELECT id FROM users WHERE email = ?",
-      [email],
-    );
-
-    if ((existingUsers as any[]).length > 0) {
+    const existingUser = await UserModel.findByEmail(email);
+    if (existingUser) {
       return res.status(409).json({ message: "User already exists" });
     }
 
-    // Create new user
-    const user = await createUser(email, password, fullName);
+    // Create new user with role
+    const userData = {
+      email,
+      password,
+      fullName,
+      role: role || "user", // Default to 'user' if not specified
+    };
+
+    const user = await UserModel.create(userData);
 
     if (!user) {
       return res.status(500).json({ message: "Failed to create user" });
     }
 
-    // Generate token
-    const loginResult = await loginUser(email, password);
+    // Get user with roles for response
+    const userWithRoles = await UserModel.findByIdWithRolesAndPermissions(
+      user.id,
+    );
 
-    if (!loginResult) {
-      return res
-        .status(500)
-        .json({ message: "Failed to generate login token" });
-    }
+    // Generate token
+    const token = generateToken({
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role,
+    });
 
     res.status(201).json({
       message: "User registered successfully",
@@ -53,8 +57,9 @@ router.post("/register", async (req, res) => {
         email: user.email,
         fullName: user.fullName,
         role: user.role,
+        roles: userWithRoles?.roles || [],
       },
-      token: loginResult.token,
+      token,
     });
   } catch (error) {
     console.error("Registration error:", error);
@@ -74,43 +79,58 @@ router.post("/login", async (req, res) => {
         .json({ message: "Email and password are required" });
     }
 
-    // For development/testing purposes only - allow admin login without database check
-    if (email === "admin@example.com" && password === "admin123") {
-      const adminUser = {
-        id: 1,
-        email: "admin@example.com",
-        fullName: "Admin User",
-        role: "admin",
-      };
-
-      try {
-        // Generate token
-        const token = generateToken(adminUser);
-
-        return res.json({
-          message: "Login successful",
-          user: adminUser,
-          token: token,
-        });
-      } catch (tokenError: any) {
-        console.error("Token generation error:", tokenError);
-        return res.status(500).json({ message: "Authentication system error" });
-      }
-    }
+    // Admin users must be properly authenticated through the database
 
     try {
-      // Attempt login from database
-      const result = await loginUser(email, password);
-
-      if (!result) {
+      // Find user by email
+      const user = await UserModel.findByEmail(email);
+      if (!user) {
         return res.status(401).json({ message: "Invalid credentials" });
       }
+
+      // Get user with password for verification
+      const [rows] = await pool.execute(
+        "SELECT password FROM users WHERE id = ?",
+        [user.id],
+      );
+      const userWithPassword = rows[0] as { password: string };
+
+      // Check password
+      const validPassword = await comparePasswords(
+        password,
+        userWithPassword.password,
+      );
+      if (!validPassword) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      // Get user with roles and permissions
+      const userWithRoles = await UserModel.findByIdWithRolesAndPermissions(
+        user.id,
+      );
+
+      // Update last login timestamp
+      await UserModel.updateLastLogin(user.id);
+
+      // Generate JWT token
+      const token = generateToken({
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+      });
 
       // Login successful
       return res.json({
         message: "Login successful",
-        user: result.user,
-        token: result.token,
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          role: user.role,
+          roles: userWithRoles?.roles || [],
+        },
+        token,
       });
     } catch (error: any) {
       console.error("Login process error:", error);
@@ -136,27 +156,24 @@ router.post("/login", async (req, res) => {
 });
 
 // Get current user endpoint
-router.get("/me", async (req, res) => {
+router.get("/me", authenticate, async (req, res) => {
   try {
-    const authHeader = req.headers.authorization;
+    const userWithRoles = await UserModel.findByIdWithRolesAndPermissions(
+      req.user.id,
+    );
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-
-    const token = authHeader.split(" ")[1];
-    const user = await verifyToken(token);
-
-    if (!user) {
-      return res.status(401).json({ message: "Invalid or expired token" });
+    if (!userWithRoles) {
+      return res.status(404).json({ message: "User not found" });
     }
 
     res.json({
       user: {
-        id: user.id,
-        email: user.email,
-        fullName: user.fullName,
-        role: user.role,
+        id: userWithRoles.id,
+        email: userWithRoles.email,
+        fullName: userWithRoles.fullName,
+        role: userWithRoles.role,
+        roles: userWithRoles.roles || [],
+        permissions: userWithRoles.permissions || [],
       },
     });
   } catch (error) {

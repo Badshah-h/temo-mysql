@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { verifyToken } from "../lib/auth.js";
+import { UserModel } from "../db/models/User.js";
 import { PermissionModel } from "../db/models/Permission.js";
 
 // Extend Express Request type to include user
@@ -42,20 +43,43 @@ export const authenticate = async (
 
 // Middleware to check user role
 export const checkRole = (roles: string | string[]) => {
-  return (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
 
-    const allowedRoles = Array.isArray(roles) ? roles : [roles];
+      const allowedRoles = Array.isArray(roles) ? roles : [roles];
 
-    if (!allowedRoles.includes(req.user.role)) {
+      // Special case for admin role - always grant access
+      if (req.user.role === "admin") {
+        return next();
+      }
+
+      // Get user with roles from database
+      const userRoles = await UserModel.getUserRolesWithPermissions(
+        req.user.id,
+      );
+
+      // Check if user has any of the required roles
+      const userRoleNames = userRoles.map((role) => role.name);
+      const hasRequiredRole = allowedRoles.some((role) =>
+        userRoleNames.includes(role),
+      );
+
+      if (!hasRequiredRole) {
+        return res
+          .status(403)
+          .json({ message: "Access denied: insufficient permissions" });
+      }
+
+      next();
+    } catch (error) {
+      console.error("Role check error:", error);
       return res
-        .status(403)
-        .json({ message: "Access denied: insufficient permissions" });
+        .status(500)
+        .json({ message: "Error checking role permissions" });
     }
-
-    next();
   };
 };
 

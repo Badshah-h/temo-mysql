@@ -11,18 +11,34 @@ const isBrowser = typeof window !== "undefined";
 
 // Secret key for JWT signing (from Vite env or fallback for testing)
 const JWT_SECRET = new TextEncoder().encode(
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_JWT_SECRET) || "fallback-secret-key-must-be-32+chars"
+  (typeof import.meta !== "undefined" && import.meta.env?.VITE_JWT_SECRET) ||
+    "fallback-secret-key-must-be-32+chars",
 );
 
 // -------------------
 // Types
 // -------------------
 
+export interface Role {
+  id: number;
+  name: string;
+  description?: string;
+}
+
+export interface Permission {
+  id: number;
+  name: string;
+  description?: string;
+  category?: string;
+}
+
 export interface User {
   id: number;
   email: string;
   fullName: string;
   role: string;
+  roles?: Role[];
+  permissions?: Permission[];
 }
 
 export interface UserWithPassword extends User {
@@ -43,13 +59,15 @@ export async function hashPassword(password: string): Promise<string> {
 
 export async function comparePasswords(
   password: string,
-  hashedPassword: string
+  hashedPassword: string,
 ): Promise<boolean> {
   if (isBrowser) {
     console.warn("⚠️ Password comparison should be done server-side.");
     return hashedPassword === `hashed_${password}`;
   }
-  throw new Error("comparePasswords should not be used outside of browser mock");
+  throw new Error(
+    "comparePasswords should not be used outside of browser mock",
+  );
 }
 
 // -------------------
@@ -59,7 +77,7 @@ export async function comparePasswords(
 export async function createUser(
   email: string,
   password: string,
-  fullName: string
+  fullName: string,
 ): Promise<User | null> {
   if (isBrowser) {
     console.warn("⚠️ User creation should be done via API.");
@@ -68,12 +86,15 @@ export async function createUser(
       email,
       fullName,
       role: "user",
+      roles: [{ id: 1, name: "user", description: "Regular user" }],
     };
   }
   return null;
 }
 
-export async function findUserByEmail(email: string): Promise<UserWithPassword | null> {
+export async function findUserByEmail(
+  email: string,
+): Promise<UserWithPassword | null> {
   if (isBrowser) {
     console.warn("⚠️ User lookup should be done via API.");
 
@@ -84,6 +105,7 @@ export async function findUserByEmail(email: string): Promise<UserWithPassword |
         email,
         fullName: "Admin User",
         role: "admin",
+        roles: [{ id: 2, name: "admin", description: "Administrator" }],
         password: "hashed_admin123",
       };
     }
@@ -100,6 +122,8 @@ export async function generateToken(user: User): Promise<string> {
     sub: user.id.toString(),
     email: user.email,
     role: user.role,
+    name: user.fullName,
+    roles: user.roles?.map((r) => r.name) || [],
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -113,11 +137,14 @@ export async function verifyToken(token: string): Promise<User | null> {
 
     if (!payload.sub || !payload.email || !payload.role) return null;
 
+    const roles = (payload.roles as string[]) || [];
+
     return {
       id: parseInt(payload.sub as string, 10),
       email: payload.email as string,
       fullName: (payload.name as string) || "",
       role: payload.role as string,
+      roles: roles.map((name) => ({ id: 0, name })),
     };
   } catch (error) {
     console.error("Token verification failed:", error);
@@ -131,7 +158,7 @@ export async function verifyToken(token: string): Promise<User | null> {
 
 export async function loginUser(
   email: string,
-  password: string
+  password: string,
 ): Promise<{ user: User; token: string } | null> {
   if (isBrowser) {
     console.warn("⚠️ Login should be done via secure API.");
@@ -142,6 +169,7 @@ export async function loginUser(
         email,
         fullName: "Admin User",
         role: "admin",
+        roles: [{ id: 2, name: "admin", description: "Administrator" }],
       };
 
       const token = await generateToken(user);

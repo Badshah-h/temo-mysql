@@ -1,8 +1,23 @@
+export interface Role {
+  id: number;
+  name: string;
+  description?: string;
+}
+
+export interface Permission {
+  id: number;
+  name: string;
+  description?: string;
+  category?: string;
+}
+
 export interface User {
   id: number;
   email: string;
   fullName: string;
   role: string;
+  roles?: Role[];
+  permissions?: Permission[];
 }
 
 export interface UserWithPassword extends User {
@@ -14,6 +29,8 @@ export interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  hasRole: (role: string) => boolean;
+  hasPermission: (permission: string) => boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
 }

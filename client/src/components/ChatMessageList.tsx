@@ -4,59 +4,26 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { motion } from "framer-motion";
-
-type MessageType = "user" | "ai" | "system";
-
-interface FollowUpSuggestion {
-  id: string;
-  text: string;
-  action?: "static" | "prompt" | "kb";
-}
-
-interface Message {
-  id: string;
-  content: string;
-  type: MessageType;
-  timestamp: Date;
-  followUpSuggestions?: FollowUpSuggestion[];
-  isTyping?: boolean;
-}
+import { FileText, Image as ImageIcon, Volume } from "lucide-react";
+import { Message } from "./ChatWidget";
 
 interface ChatMessageListProps {
-  messages?: Message[];
+  messages: Message[];
   isTyping?: boolean;
-  onFollowUpClick?: (suggestion: FollowUpSuggestion) => void;
+  onFollowUpClick?: (followUp: string) => void;
+  darkMode?: boolean;
+  primaryColor?: string;
+  secondaryColor?: string;
   maxHeight?: string | number;
 }
 
 const ChatMessageList: React.FC<ChatMessageListProps> = ({
-  messages = [
-    {
-      id: "1",
-      content: "Hello! How can I help you today?",
-      type: "ai",
-      timestamp: new Date(),
-      followUpSuggestions: [
-        { id: "f1", text: "Tell me about your services", action: "prompt" },
-        { id: "f2", text: "How does this work?", action: "static" },
-      ],
-    },
-    {
-      id: "2",
-      content: "I need help with setting up the widget on my website.",
-      type: "user",
-      timestamp: new Date(Date.now() - 60000),
-    },
-    {
-      id: "3",
-      content:
-        "Sure, I can help with that. To embed the widget on your website, you'll need to copy the generated code snippet and paste it into your website's HTML. Would you like me to show you how to generate the embed code?",
-      type: "ai",
-      timestamp: new Date(Date.now() - 30000),
-    },
-  ],
+  messages = [],
   isTyping = false,
   onFollowUpClick = () => {},
+  darkMode = false,
+  primaryColor = "#4f46e5",
+  secondaryColor = "#818cf8",
   maxHeight = "450px",
 }) => {
   // Auto-scroll to bottom when new messages arrive
@@ -65,6 +32,14 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
   React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
+
+  // Format timestamp
+  const formatTime = (date: Date) => {
+    return new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      minute: "numeric",
+    }).format(date);
+  };
 
   return (
     <div className="flex flex-col w-full h-full bg-background">
@@ -75,6 +50,9 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
               key={message.id}
               message={message}
               onFollowUpClick={onFollowUpClick}
+              darkMode={darkMode}
+              primaryColor={primaryColor}
+              secondaryColor={secondaryColor}
             />
           ))}
 
@@ -96,10 +74,73 @@ const ChatMessageList: React.FC<ChatMessageListProps> = ({
 
 const MessageBubble: React.FC<{
   message: Message;
-  onFollowUpClick: (suggestion: FollowUpSuggestion) => void;
-}> = ({ message, onFollowUpClick }) => {
-  const isUser = message.type === "user";
-  const isSystem = message.type === "system";
+  onFollowUpClick: (followUp: string) => void;
+  darkMode?: boolean;
+  primaryColor?: string;
+  secondaryColor?: string;
+}> = ({ message, onFollowUpClick, darkMode, primaryColor, secondaryColor }) => {
+  const isUser = message.sender === "user";
+  const isSystem = message.sender === "system";
+
+  // Render attachment based on type
+  const renderAttachment = (attachment: {
+    type: "image" | "file" | "audio";
+    url: string;
+    name: string;
+    size?: number;
+  }) => {
+    switch (attachment.type) {
+      case "image":
+        return (
+          <div className="mt-2 rounded-md overflow-hidden">
+            <img
+              src={attachment.url}
+              alt={attachment.name}
+              className="max-w-full max-h-[200px] object-contain"
+            />
+            <div className="text-xs text-muted-foreground mt-1">
+              {attachment.name}
+            </div>
+          </div>
+        );
+      case "audio":
+        return (
+          <div className="mt-2 p-2 rounded-md bg-muted flex items-center gap-2">
+            <Volume className="h-4 w-4" />
+            <div className="flex-1 overflow-hidden text-ellipsis">
+              <div className="text-sm font-medium">{attachment.name}</div>
+              <audio controls className="w-full mt-1">
+                <source src={attachment.url} />
+              </audio>
+            </div>
+          </div>
+        );
+      default:
+        return (
+          <div className="mt-2 p-2 rounded-md bg-muted flex items-center gap-2">
+            <FileText className="h-4 w-4" />
+            <div className="flex-1 overflow-hidden text-ellipsis">
+              <div className="text-sm font-medium">{attachment.name}</div>
+              <div className="text-xs text-muted-foreground">
+                {attachment.size
+                  ? `${Math.round(attachment.size / 1024)} KB`
+                  : ""}
+              </div>
+            </div>
+            <Button variant="ghost" size="sm" asChild>
+              <a
+                href={attachment.url}
+                download={attachment.name}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Download
+              </a>
+            </Button>
+          </div>
+        );
+    }
+  };
 
   return (
     <div className={`flex ${isUser ? "justify-end" : "justify-start"} w-full`}>
@@ -108,7 +149,7 @@ const MessageBubble: React.FC<{
       >
         {!isUser && (
           <Avatar className="h-8 w-8">
-            {message.type === "ai" ? (
+            {message.sender === "ai" ? (
               <>
                 <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=bot" />
                 <AvatarFallback>AI</AvatarFallback>
@@ -131,25 +172,47 @@ const MessageBubble: React.FC<{
                   ? "bg-muted text-muted-foreground"
                   : "bg-secondary text-secondary-foreground"
             }`}
+            style={{
+              backgroundColor: isUser
+                ? primaryColor
+                : isSystem
+                  ? undefined
+                  : `${primaryColor}20`,
+              color: isUser
+                ? "#ffffff"
+                : isSystem
+                  ? undefined
+                  : darkMode
+                    ? "#f3f4f6"
+                    : "#1f2937",
+            }}
           >
             {message.content}
           </div>
 
-          {message.followUpSuggestions &&
-            message.followUpSuggestions.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {message.followUpSuggestions.map((suggestion) => (
-                  <Button
-                    key={suggestion.id}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onFollowUpClick(suggestion)}
-                  >
-                    {suggestion.text}
-                  </Button>
-                ))}
-              </div>
-            )}
+          {/* Render attachments if any */}
+          {message.attachments?.map((attachment, index) => (
+            <div key={`${message.id}-attachment-${index}`}>
+              {renderAttachment(attachment)}
+            </div>
+          ))}
+
+          {/* Follow-up suggestions */}
+          {message.followUps && message.followUps.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {message.followUps.map((suggestion, index) => (
+                <Button
+                  key={`${message.id}-followup-${index}`}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onFollowUpClick(suggestion)}
+                  style={{ borderColor: `${secondaryColor}40` }}
+                >
+                  {suggestion}
+                </Button>
+              ))}
+            </div>
+          )}
         </div>
 
         {isUser && (

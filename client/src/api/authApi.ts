@@ -29,12 +29,18 @@ export const authApi = {
     }
   },
 
-  register: async (fullName: string, email: string, password: string) => {
+  register: async (
+    fullName: string,
+    email: string,
+    password: string,
+    role?: string,
+  ) => {
     try {
       const response = await api.post("/auth/register", {
         fullName,
         email,
         password,
+        role, // Optional role parameter
       });
       return response.data;
     } catch (error) {
@@ -65,6 +71,36 @@ export const authApi = {
   getCurrentUser: async (): Promise<{ user: User }> => {
     try {
       const response = await api.get("/auth/me");
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Get user roles
+  getUserRoles: async (userId: number): Promise<any> => {
+    try {
+      const response = await api.get(`/users/${userId}/roles`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Assign role to user
+  assignRole: async (userId: number, roleId: number): Promise<any> => {
+    try {
+      const response = await api.post(`/users/${userId}/roles`, { roleId });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Remove role from user
+  removeRole: async (userId: number, roleId: number): Promise<any> => {
+    try {
+      const response = await api.delete(`/users/${userId}/roles/${roleId}`);
       return response.data;
     } catch (error) {
       throw error;

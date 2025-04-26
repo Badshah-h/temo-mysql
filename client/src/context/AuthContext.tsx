@@ -6,6 +6,9 @@ interface AuthContextType {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isAdmin: boolean;
+  hasRole: (role: string) => boolean;
+  hasPermission: (permission: string) => boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
 }
@@ -59,14 +62,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null);
           setToken(null);
         }
-      } else {
-        setIsLoading(false);
       }
     } catch (error) {
       console.error("Error loading auth state:", error);
       localStorage.removeItem("auth_token");
       setUser(null);
       setToken(null);
+    } finally {
       setIsLoading(false);
     }
   };
@@ -104,14 +106,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
+  // Check if user has a specific role
+  const hasRole = (roleName: string): boolean => {
+    if (!user) return false;
+
+    // Check primary role for backward compatibility
+    if (user.role === roleName) return true;
+
+    // Check all roles if available
+    if (user.roles && user.roles.length > 0) {
+      return user.roles.some((role) => role.name === roleName);
+    }
+
+    return false;
+  };
+
+  // Check if user has a specific permission
+  const hasPermission = (permissionName: string): boolean => {
+    if (!user) return false;
+
+    // Admin has all permissions
+    if (user.role === "admin" || hasRole("admin")) return true;
+
+    // Check direct permissions if available
+    if (user.permissions && user.permissions.length > 0) {
+      return user.permissions.some(
+        (permission) => permission.name === permissionName,
+      );
+    }
+
+    return false;
+  };
+
+  const isAdmin = hasRole("admin");
+
   const value = {
     user,
     token,
     isAuthenticated: !!user,
     isLoading,
+    isAdmin,
+    hasRole,
+    hasPermission,
     login,
     logout,
   };
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

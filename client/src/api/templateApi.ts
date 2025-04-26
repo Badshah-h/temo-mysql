@@ -184,49 +184,4 @@ export const templateApi = {
       { headers: { Authorization: `Bearer ${token}` } },
     );
   },
-  deleteTemplate: async (id: number, token: string): Promise<void> => {
-    await axios.delete(`/api/prompt-templates/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  },
-
-  /**
-   * Increment template usage count
-   */
-  incrementUsageCount: async (id: number, token: string): Promise<void> => {
-    await axios.post(
-      `/api/prompt-templates/${id}/increment-usage`,
-      {},
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      },
-    );
-  },
-
-  /**
-   * Get all template categories
-   */
-  getCategories: async (token: string): Promise<string[]> => {
-    const response = await axios.get("/api/prompt-templates/categories", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-
-    return response.data.categories;
-  },
-
-  /**
-   * Set role access for a template
-   */
-  setRoleAccess: async (
-    templateId: number,
-    roleId: number,
-    access: { canView?: boolean; canEdit?: boolean; canDelete?: boolean },
-    token: string,
-  ): Promise<void> => {
-    await axios.post(
-      `/api/prompt-templates/${templateId}/access`,
-      { roleId, ...access },
-      { headers: { Authorization: `Bearer ${token}` } },
-    );
-  },
 };
