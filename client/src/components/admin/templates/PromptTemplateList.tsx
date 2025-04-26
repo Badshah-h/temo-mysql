@@ -74,8 +74,8 @@ const PromptTemplateList: React.FC<PromptTemplateListProps> = ({
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-  // Base API URL - update this to match the server route
-  const API_BASE_URL = "/api/promptTemplates";
+  // Base API URL - matches the server route
+  const API_BASE_URL = "/api/prompt-templates";
 
   const fetchTemplates = async () => {
     try {
