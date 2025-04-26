@@ -1,13 +1,13 @@
 import express from "express";
-import pool from "../lib/db.js";
+import pool from "../lib/db";
 import {
   authenticate,
   checkPermission,
   checkRole,
-} from "../middleware/auth.js";
-import { UserModel } from "../db/models/User.js";
-import { RoleModel } from "../db/models/Role.js";
-import { PermissionModel } from "../db/models/Permission.js";
+} from "../middleware/auth";
+import { UserModel } from "../db/models/User";
+import { RoleModel } from "../db/models/Role";
+import { PermissionModel } from "../db/models/Permission";
 
 const router = express.Router();
 
@@ -65,7 +65,7 @@ router.get("/:id", authenticate, async (req, res) => {
     }
 
     // Get user with roles and permissions
-    const user = await UserModel.findByIdWithRolesAndPermissions(userId);
+    const user = await UserModel.findById(userId);
 
     if (!user) {
       return res.status(404).json({ message: "User not found" });
@@ -104,6 +104,7 @@ router.post(
 
       // Create user
       const user = await UserModel.create({
+        tenantId: req.user.tenantId,
         email,
         password,
         fullName,
@@ -337,7 +338,7 @@ router.post(
       }
 
       // First remove all existing roles
-      await pool.execute("DELETE FROM user_roles WHERE user_id = ?", [userId]);
+      await pool("user_roles").where("user_id", userId).del();
 
       // Then assign new roles
       if (roleIds.length > 0) {

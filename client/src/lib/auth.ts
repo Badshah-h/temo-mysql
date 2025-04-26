@@ -36,7 +36,6 @@ export interface User {
   id: number;
   email: string;
   fullName: string;
-  role: string;
   roles?: Role[];
   permissions?: Permission[];
 }
@@ -85,7 +84,6 @@ export async function createUser(
       id: 1,
       email,
       fullName,
-      role: "user",
       roles: [{ id: 1, name: "user", description: "Regular user" }],
     };
   }
@@ -104,7 +102,6 @@ export async function findUserByEmail(
         id: 1,
         email,
         fullName: "Admin User",
-        role: "admin",
         roles: [{ id: 2, name: "admin", description: "Administrator" }],
         password: "hashed_admin123",
       };
@@ -121,7 +118,6 @@ export async function generateToken(user: User): Promise<string> {
   return await new SignJWT({
     sub: user.id.toString(),
     email: user.email,
-    role: user.role,
     name: user.fullName,
     roles: user.roles?.map((r) => r.name) || [],
   })
@@ -135,7 +131,7 @@ export async function verifyToken(token: string): Promise<User | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
 
-    if (!payload.sub || !payload.email || !payload.role) return null;
+    if (!payload.sub || !payload.email || !payload.roles) return null;
 
     const roles = (payload.roles as string[]) || [];
 
@@ -143,7 +139,6 @@ export async function verifyToken(token: string): Promise<User | null> {
       id: parseInt(payload.sub as string, 10),
       email: payload.email as string,
       fullName: (payload.name as string) || "",
-      role: payload.role as string,
       roles: roles.map((name) => ({ id: 0, name })),
     };
   } catch (error) {
@@ -168,7 +163,6 @@ export async function loginUser(
         id: 1,
         email,
         fullName: "Admin User",
-        role: "admin",
         roles: [{ id: 2, name: "admin", description: "Administrator" }],
       };
 

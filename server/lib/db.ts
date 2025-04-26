@@ -1,55 +1,56 @@
-// Database utility functions
-import mysql, { Pool, PoolConnection, RowDataPacket, ResultSetHeader } from "mysql2/promise";
-import dbConfig from "../config/database.js";
+// src/utils/db.ts
+import knex from 'knex';
+import dbConfig from '../config/database';
 
-/**
- * Create a MySQL connection pool
- * This allows for better performance and connection management
- */
-const pool: Pool = mysql.createPool({
-  host: dbConfig.host,
-  port: dbConfig.port,
-  user: dbConfig.user,
-  password: dbConfig.password,
-  database: dbConfig.database,
-  waitForConnections: dbConfig.waitForConnections,
-  connectionLimit: dbConfig.connectionLimit,
-  queueLimit: dbConfig.queueLimit,
-  timezone: dbConfig.timezone,
+const db = knex({
+  client: 'mysql2',
+  connection: {
+    host: dbConfig.host,
+    port: dbConfig.port,
+    user: dbConfig.user,
+    password: dbConfig.password,
+    database: dbConfig.database,
+  },
+  pool: { min: 2, max: 10 },
 });
 
 /**
- * Test database connection
+ * Test database connection.
+ * Logs success/failure and returns a boolean.
  */
 export async function testConnection(): Promise<boolean> {
+  let connection: knex.QueryBuilder | null = null;
   try {
-    const connection: PoolConnection = await pool.getConnection();
-    console.log("Database connection established successfully");
-    connection.release();
+    connection = await db.raw('SELECT 1');
+    console.log("✅ Database connection established successfully");
     return true;
   } catch (error) {
-    console.error("Failed to connect to database:", error);
+    console.error("❌ Failed to connect to the database:", error);
     return false;
   }
 }
 
 /**
- * Execute a query with parameters
- * @param sql - SQL query
- * @param params - Query parameters
- * @returns Query results
+ * Execute a SQL query using the pool.
+ * @param sql SQL query string
+ * @param params Optional parameters
+ * @returns Query result as typed data
  */
-export async function query<T = RowDataPacket[] | ResultSetHeader>(
+export async function query<T = knex.QueryBuilder>(
   sql: string,
   params: any[] = []
 ): Promise<T> {
   try {
-    const [results] = await pool.execute(sql, params);
+    const results = await db.raw(sql, params);
     return results as T;
   } catch (error) {
-    console.error("Database query error:", error);
-    throw error;
+    console.error("❌ Database query failed:", {
+      sql,
+      params,
+      error,
+    });
+    throw new Error("Database query execution failed");
   }
 }
 
-export default pool;
+export default db;

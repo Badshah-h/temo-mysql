@@ -9,14 +9,13 @@
     "build-no-errors": "cd client && tsc && vite build",
     "lint": "eslint . --ext ts,tsx,js --report-unused-disable-directives --max-warnings 0",
     "preview": "cd client && vite preview",
-    "types:supabase": "npx supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > client/src/types/supabase.ts",
     "db:setup": "node server/scripts/setup-db.mjs",
     "db:migrate": "node server/scripts/run-migrations.mjs",
     "db:seed": "node server/scripts/run-seeds.mjs",
     "db:reset": "node server/scripts/reset-db.mjs",
-    "server": "node --loader ts-node/esm server/index.ts",
     "dev:all": "concurrently \"npm run dev\" \"npm run server\"",
     "client": "cd client && vite",
+    "server": "ts-node --loader ts-node/esm server/index.ts",
     "build:client": "cd client && tsc && vite build",
     "build:server": "echo \"No build step for server in development\""
   },
@@ -51,6 +50,7 @@
     "@radix-ui/react-tooltip": "^1.0.7",
     "@supabase/supabase-js": "^2.45.6",
     "axios": "^1.9.0",
+    "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
@@ -80,6 +80,7 @@
     "zod": "^3.24.3"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
@@ -94,7 +95,8 @@
     "tailwindcss": "3.4.1",
     "tempo-devtools": "^2.0.102",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.8.3",
     "vite": "^6.2.3"
   }
 }

@@ -52,7 +52,7 @@ export const checkRole = (roles: string | string[]) => {
       const allowedRoles = Array.isArray(roles) ? roles : [roles];
 
       // Special case for admin role - always grant access
-      if (req.user.role === "admin") {
+      if (req.user.roles && req.user.roles.some(role => role.name === "admin")) {
         return next();
       }
 
@@ -97,7 +97,7 @@ export const checkPermission = (requiredPermissions: string | string[]) => {
 
     try {
       // Special case for admin role - always grant access
-      if (req.user.role === "admin") {
+      if (req.user.roles && req.user.roles.some(role => role.name === "admin")) {
         return next();
       }
 
@@ -134,7 +134,7 @@ export const checkAnyPermission = (permissions: string[]) => {
 
     try {
       // Special case for admin role - always grant access
-      if (req.user.role === "admin") {
+      if (req.user.roles && req.user.roles.some(role => role.name === "admin")) {
         return next();
       }
 

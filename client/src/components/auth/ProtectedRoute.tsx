@@ -29,10 +29,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Check for required role(s) if specified
   if (requiredRole && user) {
-    const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+    const { hasRole } = useAuth();
+    const requiredRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
 
-    if (!roles.includes(user.role)) {
-      // User doesn't have the required role
+    // Check if user has any of the required roles
+    const hasRequiredRole = requiredRoles.some(role => hasRole(role));
+
+    if (!hasRequiredRole) {
+      // User doesn't have any of the required roles
       return <Navigate to="/unauthorized" replace />;
     }
   }

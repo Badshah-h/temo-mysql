@@ -110,10 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const hasRole = (roleName: string): boolean => {
     if (!user) return false;
 
-    // Check primary role for backward compatibility
-    if (user.role === roleName) return true;
-
-    // Check all roles if available
+    // Check all roles
     if (user.roles && user.roles.length > 0) {
       return user.roles.some((role) => role.name === roleName);
     }
@@ -126,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return false;
 
     // Admin has all permissions
-    if (user.role === "admin" || hasRole("admin")) return true;
+    if (hasRole("admin")) return true;
 
     // Check direct permissions if available
     if (user.permissions && user.permissions.length > 0) {

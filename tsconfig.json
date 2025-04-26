@@ -19,8 +19,11 @@
     "strict": true,
     "esModuleInterop": true,
     "paths": {
-      "@/*": [
-        "./src/*"
+      "@client/*": [
+        "./client/src/*"
+      ],
+      "@server/*": [
+        "./server/src/*"
       ]
     }
   },
@@ -30,7 +33,7 @@
   },
   "include": [
     "client/src",
-    "server",
+    "server/src",
     "client/vite-env.d.ts"
   ],
   "exclude": [

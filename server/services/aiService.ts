@@ -1,6 +1,6 @@
-import { db } from "../lib/db";
-import { Template } from "../types/template";
-import { ResponseFormat } from "../types/responseFormat";
+import db from "../db";
+// import { Template } from "../types/template";
+// import { ResponseFormat } from "../types/responseFormat";
 
 export interface AIServiceOptions {
   model?: string;
@@ -33,7 +33,7 @@ export class AIService {
   ): Promise<AIResponse> {
     try {
       // Get the template
-      const template = await db("templates").where("id", templateId).first();
+      const template = await db("templates").where({ id: templateId }).first();
 
       if (!template) {
         throw new Error(`Template with ID ${templateId} not found`);
@@ -41,9 +41,9 @@ export class AIService {
 
       // Increment template usage count
       await db("templates")
-        .where("id", templateId)
+        .where({ id: templateId })
         .update({
-          usage_count: db.raw("usage_count + 1"),
+          usage_count: db.raw("?? + 1", ["usage_count"]),
           updated_at: new Date(),
         });
 
@@ -60,15 +60,15 @@ export class AIService {
       if (template.response_format_id) {
         // Get the response format
         const format = await db("response_formats")
-          .where("id", template.response_format_id)
+          .where({ id: template.response_format_id })
           .first();
 
         if (format) {
           // Increment format usage count
           await db("response_formats")
-            .where("id", template.response_format_id)
+            .where({ id: template.response_format_id })
             .update({
-              usage_count: db.raw("usage_count + 1"),
+              usage_count: db.raw("?? + 1", ["usage_count"]),
               updated_at: new Date(),
             });
 
