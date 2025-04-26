@@ -24,92 +24,102 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Pagination } from "@/components/ui/pagination";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import { Edit, Trash2, MoreVertical, Plus, Search, Eye } from "lucide-react";
+import { Edit, Trash2, MoreVertical, Plus, Search } from "lucide-react";
 import axios from "axios";
 
-interface PromptTemplate {
+interface Permission {
   id: number;
   name: string;
   description?: string;
   category?: string;
-  tags?: string[];
-  isGlobal: boolean;
-  usageCount: number;
-  createdAt: string;
-  creator?: {
-    id: number;
-    fullName: string;
-    email: string;
-  };
 }
 
-interface PromptTemplateListProps {
+interface PermissionsListProps {
   onCreateNew?: () => void;
-  onEdit?: (template: PromptTemplate) => void;
-  onView?: (template: PromptTemplate) => void;
+  onEdit?: (permission: Permission) => void;
 }
 
-const PromptTemplateList: React.FC<PromptTemplateListProps> = ({
+const PermissionsList: React.FC<PermissionsListProps> = ({
   onCreateNew,
   onEdit,
-  onView,
 }) => {
-  const { user, token } = useAuth();
+  const { token } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const [templates, setTemplates] = useState<PromptTemplate[]>([]);
+  const [permissions, setPermissions] = useState<Permission[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [showGlobalOnly, setShowGlobalOnly] = useState(false);
-  const [showMyTemplates, setShowMyTemplates] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-  // Base API URL - update this to match the server route
-  const API_BASE_URL = "/api/promptTemplates";
+  const API_BASE_URL = "/api/permissions";
 
-  const fetchTemplates = async () => {
+  const fetchPermissions = async () => {
     try {
       setLoading(true);
 
-      let url = `${API_BASE_URL}?page=${currentPage}&limit=10&sortBy=${sortBy}&sortOrder=${sortOrder}`;
-
-      if (searchTerm) {
-        url += `&search=${encodeURIComponent(searchTerm)}`;
-      }
-
-      if (selectedCategory) {
-        url += `&category=${encodeURIComponent(selectedCategory)}`;
-      }
-
-      if (showGlobalOnly) {
-        url += "&isGlobal=true";
-      }
-
-      if (showMyTemplates && user) {
-        url += `&createdBy=${user.id}`;
-      }
-
-      const response = await axios.get(url, {
+      // In a real implementation, this would use pagination parameters
+      const response = await axios.get(API_BASE_URL, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      setTemplates(response.data.templates);
-      setTotalPages(response.data.pagination.totalPages);
+      let filteredPermissions = response.data.permissions;
+
+      // Client-side filtering
+      if (searchTerm) {
+        const search = searchTerm.toLowerCase();
+        filteredPermissions = filteredPermissions.filter(
+          (p: Permission) =>
+            p.name.toLowerCase().includes(search) ||
+            (p.description && p.description.toLowerCase().includes(search)),
+        );
+      }
+
+      if (selectedCategory) {
+        filteredPermissions = filteredPermissions.filter(
+          (p: Permission) => p.category === selectedCategory,
+        );
+      }
+
+      // Client-side sorting
+      filteredPermissions.sort((a: Permission, b: Permission) => {
+        const aValue = a[sortBy as keyof Permission] || "";
+        const bValue = b[sortBy as keyof Permission] || "";
+
+        if (typeof aValue === "string" && typeof bValue === "string") {
+          return sortOrder === "asc"
+            ? aValue.localeCompare(bValue)
+            : bValue.localeCompare(aValue);
+        }
+        return 0;
+      });
+
+      // Client-side pagination
+      const pageSize = 10;
+      const totalItems = filteredPermissions.length;
+      const totalPagesCount = Math.ceil(totalItems / pageSize);
+      const startIndex = (currentPage - 1) * pageSize;
+      const endIndex = startIndex + pageSize;
+      const paginatedPermissions = filteredPermissions.slice(
+        startIndex,
+        endIndex,
+      );
+
+      setPermissions(paginatedPermissions);
+      setTotalPages(totalPagesCount || 1);
     } catch (error) {
-      console.error("Error fetching templates:", error);
+      console.error("Error fetching permissions:", error);
       toast({
         title: "Error",
-        description: "Failed to load templates",
+        description: "Failed to load permissions",
         variant: "destructive",
       });
     } finally {
@@ -119,7 +129,6 @@ const PromptTemplateList: React.FC<PromptTemplateListProps> = ({
 
   const fetchCategories = async () => {
     try {
-      // Updated to use the correct API endpoint
       const response = await axios.get(`${API_BASE_URL}/categories`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -132,7 +141,7 @@ const PromptTemplateList: React.FC<PromptTemplateListProps> = ({
 
   useEffect(() => {
     if (token) {
-      fetchTemplates();
+      fetchPermissions();
       fetchCategories();
     }
   }, [currentPage, sortBy, sortOrder, token]);
@@ -142,12 +151,12 @@ const PromptTemplateList: React.FC<PromptTemplateListProps> = ({
     if (currentPage !== 1) {
       setCurrentPage(1);
     } else if (token) {
-      fetchTemplates();
+      fetchPermissions();
     }
-  }, [searchTerm, selectedCategory, showGlobalOnly, showMyTemplates, token]);
+  }, [searchTerm, selectedCategory, token]);
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this template?")) {
+    if (!window.confirm("Are you sure you want to delete this permission?")) {
       return;
     }
 
@@ -158,15 +167,15 @@ const PromptTemplateList: React.FC<PromptTemplateListProps> = ({
 
       toast({
         title: "Success",
-        description: "Template deleted successfully",
+        description: "Permission deleted successfully",
       });
 
-      fetchTemplates();
+      fetchPermissions();
     } catch (error) {
-      console.error("Error deleting template:", error);
+      console.error("Error deleting permission:", error);
       toast({
         title: "Error",
-        description: "Failed to delete template",
+        description: "Failed to delete permission",
         variant: "destructive",
       });
     }
@@ -183,39 +192,31 @@ const PromptTemplateList: React.FC<PromptTemplateListProps> = ({
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchTemplates();
+    fetchPermissions();
   };
 
   const handleCreateNew = () => {
     if (onCreateNew) {
       onCreateNew();
     } else {
-      navigate("/admin/templates/new");
+      navigate("/admin/permissions/new");
     }
   };
 
-  const handleEdit = (template: PromptTemplate) => {
+  const handleEdit = (permission: Permission) => {
     if (onEdit) {
-      onEdit(template);
+      onEdit(permission);
     } else {
-      navigate(`/admin/templates/edit/${template.id}`);
-    }
-  };
-
-  const handleView = (template: PromptTemplate) => {
-    if (onView) {
-      onView(template);
-    } else {
-      navigate(`/admin/templates/${template.id}`);
+      navigate(`/admin/permissions/edit/${permission.id}`);
     }
   };
 
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Prompt Templates</h2>
+        <h2 className="text-2xl font-bold">Permissions</h2>
         <Button onClick={handleCreateNew}>
-          <Plus className="mr-2 h-4 w-4" /> Create New Template
+          <Plus className="mr-2 h-4 w-4" /> Create New Permission
         </Button>
       </div>
 
@@ -224,7 +225,7 @@ const PromptTemplateList: React.FC<PromptTemplateListProps> = ({
           <form onSubmit={handleSearch} className="flex gap-2">
             <div className="flex-1">
               <Input
-                placeholder="Search templates..."
+                placeholder="Search permissions..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
@@ -251,28 +252,6 @@ const PromptTemplateList: React.FC<PromptTemplateListProps> = ({
             </SelectContent>
           </Select>
         </div>
-
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="showGlobal"
-            checked={showGlobalOnly}
-            onCheckedChange={(checked) => setShowGlobalOnly(!!checked)}
-          />
-          <label htmlFor="showGlobal" className="text-sm font-medium">
-            Global Only
-          </label>
-        </div>
-
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="showMine"
-            checked={showMyTemplates}
-            onCheckedChange={(checked) => setShowMyTemplates(!!checked)}
-          />
-          <label htmlFor="showMine" className="text-sm font-medium">
-            My Templates
-          </label>
-        </div>
       </div>
 
       <div className="border rounded-md">
@@ -293,55 +272,36 @@ const PromptTemplateList: React.FC<PromptTemplateListProps> = ({
                 Category{" "}
                 {sortBy === "category" && (sortOrder === "asc" ? "↑" : "↓")}
               </TableHead>
-              <TableHead>Tags</TableHead>
-              <TableHead
-                className="cursor-pointer"
-                onClick={() => handleSort("usageCount")}
-              >
-                Usage{" "}
-                {sortBy === "usageCount" && (sortOrder === "asc" ? "↑" : "↓")}
-              </TableHead>
-              <TableHead>Global</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
-                  Loading templates...
+                <TableCell colSpan={4} className="text-center py-8">
+                  Loading permissions...
                 </TableCell>
               </TableRow>
-            ) : templates.length === 0 ? (
+            ) : permissions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
-                  No templates found
+                <TableCell colSpan={4} className="text-center py-8">
+                  No permissions found
                 </TableCell>
               </TableRow>
             ) : (
-              templates.map((template) => (
-                <TableRow key={template.id}>
-                  <TableCell className="font-medium">{template.name}</TableCell>
+              permissions.map((permission) => (
+                <TableRow key={permission.id}>
+                  <TableCell className="font-medium">
+                    {permission.name}
+                  </TableCell>
                   <TableCell className="max-w-xs truncate">
-                    {template.description || "—"}
+                    {permission.description || "—"}
                   </TableCell>
-                  <TableCell>{template.category || "—"}</TableCell>
                   <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {template.tags?.map((tag, index) => (
-                        <Badge key={index} variant="outline">
-                          {tag}
-                        </Badge>
-                      ))}
-                      {!template.tags?.length && "—"}
-                    </div>
-                  </TableCell>
-                  <TableCell>{template.usageCount}</TableCell>
-                  <TableCell>
-                    {template.isGlobal ? (
-                      <Badge>Global</Badge>
+                    {permission.category ? (
+                      <Badge variant="secondary">{permission.category}</Badge>
                     ) : (
-                      <Badge variant="outline">Private</Badge>
+                      "—"
                     )}
                   </TableCell>
                   <TableCell>
@@ -352,14 +312,13 @@ const PromptTemplateList: React.FC<PromptTemplateListProps> = ({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleView(template)}>
-                          <Eye className="mr-2 h-4 w-4" /> View
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEdit(template)}>
+                        <DropdownMenuItem
+                          onClick={() => handleEdit(permission)}
+                        >
                           <Edit className="mr-2 h-4 w-4" /> Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => handleDelete(template.id)}
+                          onClick={() => handleDelete(permission.id)}
                           className="text-red-600"
                         >
                           <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -385,4 +344,4 @@ const PromptTemplateList: React.FC<PromptTemplateListProps> = ({
   );
 };
 
-export default PromptTemplateList;
+export default PermissionsList;

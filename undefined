@@ -1,17 +1,13 @@
 import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import PromptTemplateForm from "@/components/admin/templates/PromptTemplateForm";
+import RolePermissions from "@/components/admin/roles/RolePermissions";
+import { Card } from "@/components/ui/card";
 
-export default function PromptTemplateFormStoryboard() {
+export default function RolePermissionsStoryboard() {
   return (
-    <div className="bg-white p-6">
-      <Card>
-        <CardContent className="pt-6">
-          <PromptTemplateForm 
-            onSaved={(template) => console.log('Template saved', template)}
-            onCancel={() => console.log('Cancel clicked')}
-          />
-        </CardContent>
+    <div className="bg-white p-8">
+      <h1 className="text-3xl font-bold mb-6">Role Permissions</h1>
+      <Card className="p-6">
+        <RolePermissions roleId={1} />
       </Card>
     </div>
   );

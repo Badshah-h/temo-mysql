@@ -22,8 +22,8 @@ CREATE TABLE IF NOT EXISTS role_permissions (
   FOREIGN KEY (granted_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Insert default permissions
-INSERT INTO permissions (name, description, category) VALUES
+-- Insert default permissions (using INSERT IGNORE to skip duplicates)
+INSERT IGNORE INTO permissions (name, description, category) VALUES
 -- User management permissions
 ('users.view', 'View users', 'user_management'),
 ('users.create', 'Create users', 'user_management'),
@@ -54,23 +54,23 @@ INSERT INTO permissions (name, description, category) VALUES
 ('system.settings', 'Manage system settings', 'system'),
 ('system.logs', 'View system logs', 'system');
 
--- Assign all permissions to admin role
-INSERT INTO role_permissions (role_id, permission_id)
+-- Assign all permissions to admin role (using INSERT IGNORE to skip duplicates)
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT 
   (SELECT id FROM roles WHERE name = 'admin'), 
   id 
 FROM permissions;
 
--- Assign basic permissions to user role
-INSERT INTO role_permissions (role_id, permission_id)
+-- Assign basic permissions to user role (using INSERT IGNORE to skip duplicates)
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT 
   (SELECT id FROM roles WHERE name = 'user'),
   id
 FROM permissions 
 WHERE name IN ('content.view');
 
--- Assign moderator permissions
-INSERT INTO role_permissions (role_id, permission_id)
+-- Assign moderator permissions (using INSERT IGNORE to skip duplicates)
+INSERT IGNORE INTO role_permissions (role_id, permission_id)
 SELECT 
   (SELECT id FROM roles WHERE name = 'moderator'),
   id

@@ -1,46 +1,19 @@
 const fs = require("fs");
-const path = require("path");
+const glob = require("glob");
 
-// Directories to clean up
-const dirsToClean = ["node_modules/semver", "node_modules/.semver-*"];
+const patterns = [
+  "node_modules/tempo-devtools",
+  "node_modules/.tempo-devtools-*",
+];
 
-console.log("Cleaning up problematic npm directories...");
-
-// Clean up specific directories
-dirsToClean.forEach((dirPattern) => {
-  if (dirPattern.includes("*")) {
-    // Handle wildcard patterns
-    const baseDir = path.dirname(dirPattern);
-    const pattern = path.basename(dirPattern);
-    const regex = new RegExp(pattern.replace("*", ".*"));
-
+patterns.forEach((pattern) => {
+  const matches = glob.sync(pattern);
+  matches.forEach((match) => {
     try {
-      const files = fs.readdirSync(baseDir);
-      files.forEach((file) => {
-        if (regex.test(file)) {
-          const fullPath = path.join(baseDir, file);
-          try {
-            fs.rmSync(fullPath, { recursive: true, force: true });
-            console.log(`Removed ${fullPath}`);
-          } catch (err) {
-            console.log(`Failed to remove ${fullPath}: ${err.message}`);
-          }
-        }
-      });
+      fs.rmSync(match, { recursive: true, force: true });
+      console.log(`Removed: ${match}`);
     } catch (err) {
-      console.log(`Error reading directory ${baseDir}: ${err.message}`);
+      console.log(`Failed to remove ${match}: ${err.message}`);
     }
-  } else {
-    // Handle direct paths
-    try {
-      if (fs.existsSync(dirPattern)) {
-        fs.rmSync(dirPattern, { recursive: true, force: true });
-        console.log(`Removed ${dirPattern}`);
-      }
-    } catch (err) {
-      console.log(`Failed to remove ${dirPattern}: ${err.message}`);
-    }
-  }
+  });
 });
-
-console.log("Cleanup complete.");
