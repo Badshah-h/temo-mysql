@@ -5,6 +5,8 @@ import path from "path";
 import { testConnection } from "./lib/db.js";
 import authRoutes from "./api/auth.js";
 import userRoutes from "./api/users.js";
+import rolesRoutes from "./api/roles.js";
+import permissionsRoutes from "./api/permissions.js";
 import { authenticate } from "./middleware/auth.js";
 
 // Load environment variables
