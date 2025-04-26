@@ -398,6 +398,13 @@ const PromptTemplateForm: React.FC<PromptTemplateFormProps> = ({
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="test" className="pt-4">
+          <TemplateFormatTester
+            templateId={templateId}
+            initialQuery="How can I help you today?"
+          />
+        </TabsContent>
       </Tabs>
     </div>
   );

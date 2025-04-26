@@ -2,11 +2,29 @@ import { authRepository } from "./auth.repository";
 import bcrypt from "bcrypt";
 import * as jwt from "jsonwebtoken";
 import type { SignOptions } from "jsonwebtoken";
-import type ms from "ms";
 import { AppError } from "../../utils/errorHandler";
-import { Request, Response, NextFunction } from "express";
+import { Request as ExpressRequest, Response, NextFunction } from "express";
 import { TenantModel } from "../../db/models/Tenant";
 import db from "../../lib/db";
+
+// Extend Express Request to include user and tenant properties
+interface Request extends ExpressRequest {
+  user: {
+    id: number;
+    email: string;
+    fullName: string;
+    tenantId: number;
+  };
+  tenant?: {
+    id: number;
+    name: string;
+    theme: {
+      primaryColor?: string;
+      secondaryColor?: string;
+      logoUrl?: string;
+    };
+  };
+}
 
 // Ensure correct types for JWT secret and expiry
 const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
@@ -95,7 +113,7 @@ export const authService = {
       };
 
       const token = jwt.sign(tokenPayload, JWT_SECRET, {
-        expiresIn: JWT_EXPIRES_IN as string,
+        expiresIn: JWT_EXPIRES_IN,
       });
 
       return { user, token, tenant };
@@ -158,7 +176,7 @@ export const authService = {
           },
         },
         JWT_SECRET,
-        { expiresIn: JWT_EXPIRES_IN as string },
+        { expiresIn: JWT_EXPIRES_IN },
       );
 
       return { user, token, tenant };

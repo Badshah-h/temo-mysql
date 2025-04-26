@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
-import { testConnection } from "./lib/db.js";// import authRoutes from "./api/auth"; // Removed old auth import
+import { testConnection } from "./lib/db.js"; // import authRoutes from "./api/auth"; // Removed old auth import
 import userRoutes from "./api/users.js";
 import rolesRoutes from "./api/roles.js";
 import permissionsRoutes from "./api/permissions.js";
@@ -35,11 +35,15 @@ async function startServer() {
     });
   } catch (err) {
     console.error("Failed to set up database:", err);
-    console.log("Server will start, but database functionality may be limited.");
+    console.log(
+      "Server will start, but database functionality may be limited.",
+    );
 
     // Start the server even if database setup fails
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT} (with limited database functionality)`);
+      console.log(
+        `Server running on port ${PORT} (with limited database functionality)`,
+      );
       console.log(`API available at http://localhost:${PORT}/api`);
     });
   }
@@ -58,6 +62,7 @@ app.use("/api/prompt-templates", promptTemplatesRoutes);
 app.use("/api/response-formats", responseFormatsRoutes);
 app.use("/api/test", testRoutes);
 app.use("/api/tenants", tenantsRoutes);
+app.use("/api/ai", aiConfigRoutes);
 
 // Protected route example
 app.get("/api/protected", authenticate, (req: Request, res: Response) => {
@@ -76,11 +81,19 @@ app.get("/api/db-test", async (_req: Request, res: Response) => {
     if (connected) {
       res.json({ status: "ok", message: "Database connection successful" });
     } else {
-      res.status(500).json({ status: "error", message: "Database connection failed" });
+      res
+        .status(500)
+        .json({ status: "error", message: "Database connection failed" });
     }
   } catch (error) {
     console.error("Database test error:", error);
-    res.status(500).json({ status: "error", message: "Database connection test failed", error: String(error) });
+    res
+      .status(500)
+      .json({
+        status: "error",
+        message: "Database connection test failed",
+        error: String(error),
+      });
   }
 });
 
