@@ -2,43 +2,39 @@ import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
-import { testConnection } from "./lib/db.js";
+import { testConnection } from "./lib/db";
 import authRoutes from "./api/auth.js";
 import userRoutes from "./api/users.js";
 import rolesRoutes from "./api/roles.js";
 import permissionsRoutes from "./api/permissions.js";
-import { authenticate } from "./middleware/auth.js";
+import promptTemplatesRoutes from "./api/promptTemplates.js";
+import setupDatabase from "./setupDb";
+import { authenticate } from "./middleware/auth";
 
-// Load environment variables
+// Load environment variables directly
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
-// Configure Express
+// Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3001;
+
+// Initialize database
+setupDatabase().catch((err: Error) => {
+  console.error("Failed to set up database:", err);
+  // Don't exit process, allow server to start anyway
+  console.log("Server will start, but database functionality may be limited.");
+});
 
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Test database connection
-testConnection()
-  .then((connected: boolean) => {
-    if (!connected) {
-      console.error("Database connection failed. Server will start, but functionality may be limited.");
-    } else {
-      console.log("Database connection successful");
-    }
-  })
-  .catch((error: Error) => {
-    console.error("Error testing database connection:", error);
-  });
 
 // API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/roles", rolesRoutes);
 app.use("/api/permissions", permissionsRoutes);
+app.use("/api/promptTemplates", promptTemplatesRoutes);
 
 // Protected route example
 app.get("/api/protected", authenticate, (req: Request, res: Response) => {

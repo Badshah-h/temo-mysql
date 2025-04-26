@@ -1,0 +1,18 @@
+import React from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import PromptTemplateForm from "@/components/admin/templates/PromptTemplateForm";
+
+export default function PromptTemplateFormStoryboard() {
+  return (
+    <div className="bg-white p-6">
+      <Card>
+        <CardContent className="pt-6">
+          <PromptTemplateForm 
+            onSaved={(template) => console.log('Template saved', template)}
+            onCancel={() => console.log('Cancel clicked')}
+          />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

@@ -6,8 +6,9 @@ import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 // Check if Tempo is enabled
-const isTempo = typeof import.meta !== 'undefined' &&
-  'env' in import.meta &&
+const isTempo =
+  typeof import.meta !== "undefined" &&
+  "env" in import.meta &&
   import.meta.env.VITE_TEMPO === "true";
 
 // Lazy load admin and auth components
@@ -19,6 +20,9 @@ const AdminWidgetConfig = lazy(
 );
 const AdminEmbedCode = lazy(
   () => import("./components/admin/embed/AdminEmbedCode"),
+);
+const AdminTemplates = lazy(
+  () => import("./components/admin/templates/AdminTemplates"),
 );
 const LoginForm = lazy(() => import("./components/auth/LoginForm"));
 const RegisterForm = lazy(() => import("./components/auth/RegisterForm"));
@@ -70,11 +74,17 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="/admin/templates"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminTemplates />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Add Tempo routes for storyboards */}
-            {isTempo && (
-              <Route path="/tempobook/*" />
-            )}
+            {isTempo && <Route path="/tempobook/*" />}
           </Routes>
           {isTempo && useRoutes(routes)}
         </>
