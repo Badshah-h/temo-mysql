@@ -34,30 +34,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const storedToken = localStorage.getItem("auth_token");
       if (storedToken) {
-        // First check if token is valid on client side
-        const userData = await verifyToken(storedToken);
-        if (userData) {
-          // Then verify with server
-          try {
-            const response = await fetch("/api/auth/me", {
-              headers: { Authorization: `Bearer ${storedToken}` },
-            });
+        // Only verify with server
+        try {
+          const response = await fetch("/api/auth/me", {
+            headers: { Authorization: `Bearer ${storedToken}` },
+          });
 
-            if (response.ok) {
-              const data = await response.json();
-              setUser(data.user);
-              setToken(storedToken);
-            } else {
-              throw new Error("Server token verification failed");
-            }
-          } catch (serverError) {
-            console.error("Server verification failed:", serverError);
-            localStorage.removeItem("auth_token");
-            setUser(null);
-            setToken(null);
+          if (response.ok) {
+            const data = await response.json();
+            setUser(data.user);
+            setToken(storedToken);
+          } else {
+            throw new Error("Server token verification failed");
           }
-        } else {
-          // Token is invalid or expired
+        } catch (serverError) {
           localStorage.removeItem("auth_token");
           setUser(null);
           setToken(null);

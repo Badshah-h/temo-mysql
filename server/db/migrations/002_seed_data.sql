@@ -10,9 +10,9 @@ ON DUPLICATE KEY UPDATE description = VALUES(description);
 
 -- Insert a default admin user (password: admin123)
 -- Password hash for 'admin123' using bcrypt
-INSERT INTO users (email, password, full_name, role) VALUES
-('admin@example.com', '$2a$10$JmVmtHCEFIvJBo1CjO/C3.HrAJTbQjKsZ9nJUUL3Vx8X7JNkDJXlS', 'Admin User', 'admin')
-ON DUPLICATE KEY UPDATE full_name = VALUES(full_name), role = VALUES(role);
+INSERT INTO users (email, password, full_name) VALUES
+('admin@example.com', '$2a$10$JmVmtHCEFIvJBo1CjO/C3.HrAJTbQjKsZ9nJUUL3Vx8X7JNkDJXlS', 'Admin User')
+ON DUPLICATE KEY UPDATE full_name = VALUES(full_name);
 
 -- Assign admin role to admin user
 INSERT INTO user_roles (user_id, role_id)

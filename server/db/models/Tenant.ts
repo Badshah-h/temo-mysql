@@ -29,4 +29,11 @@ export class TenantModel {
     const tenants = rows as Tenant[];
     return tenants.length ? tenants[0] : null;
   }
+
+  static async getAll(): Promise<Tenant[]> {
+    const [rows] = await db.raw(
+      "SELECT id, name, slug, logo_url as logoUrl, primary_color as primaryColor, secondary_color as secondaryColor, created_at as createdAt, updated_at as updatedAt FROM tenants"
+    );
+    return rows as Tenant[];
+  }
 } 

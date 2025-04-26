@@ -15,7 +15,7 @@
     "db:reset": "node server/scripts/reset-db.mjs",
     "dev:all": "concurrently \"npm run dev\" \"npm run server\"",
     "client": "cd client && vite",
-    "server": "ts-node --loader ts-node/esm server/index.ts",
+    "server": "tsx server/index.ts",
     "build:client": "cd client && tsc && vite build",
     "build:server": "echo \"No build step for server in development\""
   },

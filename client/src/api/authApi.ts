@@ -106,6 +106,16 @@ export const authApi = {
       throw error;
     }
   },
+
+  // Fetch tenants
+  getTenants: async () => {
+    try {
+      const response = await api.get("/tenants");
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
 };
 
 export default api;

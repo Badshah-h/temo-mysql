@@ -26,6 +26,12 @@ export const authService = {
     // Create user
     const user = await authRepository.createUser({ tenantId: tenant.id, email, password: hashedPassword, fullName });
     if (!user) throw new AppError('Failed to create user', 500);
+    // Assign default role 'user'
+    const { RoleModel } = await import('../../db/models/Role');
+    const userRole = await RoleModel.findByName('user');
+    if (userRole) {
+      await RoleModel.assignRoleToUser(user.id, userRole.id);
+    }
     // Generate token with tenant and branding claims
     const token = jwt.sign(
       {
@@ -95,4 +101,4 @@ export const authService = {
       return res.status(401).json({ message: 'Invalid or expired token' });
     }
   },
-}; 
+};

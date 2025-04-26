@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,9 +15,12 @@ import { authApi } from "@/api/authApi";
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  // tenantSlug: z.string().min(1, "Please select a tenant"),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
+
+// type Tenant = { name: string; slug: string };
 
 const LoginForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -25,6 +28,8 @@ const LoginForm: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  // const [tenants, setTenants] = useState<Tenant[]>([]);
+  // const [tenantsLoading, setTenantsLoading] = useState(true);
 
   // Get the redirect path from location state or default to '/admin'
   const from = location.state?.from?.pathname || "/admin";
@@ -33,17 +38,41 @@ const LoginForm: React.FC = () => {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
+    setValue,
+    watch,
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: "",
       password: "",
+      // tenantSlug: "", // Set after tenants load
     },
   });
+
+  // Fetch tenants on mount
+  // useEffect(() => {
+  //   const fetchTenants = async () => {
+  //     setTenantsLoading(true);
+  //     try {
+  //       const data = await authApi.getTenants();
+  //       setTenants(data.tenants || data); // support both {tenants: []} and []
+  //       // Set default tenantSlug if not set
+  //       if ((data.tenants && data.tenants.length > 0) || (Array.isArray(data) && data.length > 0)) {
+  //         setValue("tenantSlug", (data.tenants ? data.tenants[0].slug : data[0].slug));
+  //       }
+  //     } catch (err) {
+  //       setError("Failed to load tenants");
+  //     } finally {
+  //       setTenantsLoading(false);
+  //     }
+  //   };
+  //   fetchTenants();
+  // }, [setValue]);
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
       setError(null);
+      // const response = await authApi.login(data.email, data.password, data.tenantSlug);
       const response = await authApi.login(data.email, data.password);
 
       // Store the token and user data in auth context
@@ -81,6 +110,32 @@ const LoginForm: React.FC = () => {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="tenantSlug">
+            {/* Tenant
+            {errors.tenantSlug && (
+              <span className="text-red-500 text-xs ml-1">
+                {errors.tenantSlug.message}
+              </span>
+            )} */}
+          </Label>
+          {/* {tenantsLoading ? (
+            <div className="p-2 bg-slate-100 rounded text-slate-500">Loading tenants...</div>
+          ) : (
+            <select
+              id="tenantSlug"
+              className="w-full p-2 border rounded bg-slate-50"
+              {...register("tenantSlug")}
+              {...(errors.tenantSlug ? { 'aria-invalid': 'true' } : {})}
+            >
+              {tenants.map((tenant) => (
+                <option key={tenant.slug} value={tenant.slug}>
+                  {tenant.name}
+                </option>
+              ))}
+            </select>
+          )} */}
+        </div>
         <div className="space-y-2">
           <Label htmlFor="email">
             Email

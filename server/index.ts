@@ -12,13 +12,14 @@ import testRoutes from "./api/test.js";
 import setupDatabase from "./setupDb.js";
 import { authenticate } from "./middleware/auth.js";
 import authController from "./modules/auth/auth.controller.js";
+import tenantsRoutes from "./api/tenants";
 
 // Load environment variables directly
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 // Initialize database
 async function startServer() {
@@ -56,6 +57,7 @@ app.use("/api/permissions", permissionsRoutes);
 app.use("/api/prompt-templates", promptTemplatesRoutes);
 app.use("/api/response-formats", responseFormatsRoutes);
 app.use("/api/test", testRoutes);
+app.use("/api/tenants", tenantsRoutes);
 
 // Protected route example
 app.get("/api/protected", authenticate, (req: Request, res: Response) => {

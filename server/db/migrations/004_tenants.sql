@@ -12,11 +12,12 @@ CREATE TABLE IF NOT EXISTS tenants (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-ALTER TABLE users ADD COLUMN tenant_id INT AFTER id;
-ALTER TABLE users ADD CONSTRAINT fk_users_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+-- The following ALTER TABLE statements are commented out to prevent duplicate column/constraint errors.
+-- ALTER TABLE users ADD COLUMN tenant_id INT AFTER id;
+-- ALTER TABLE users ADD CONSTRAINT fk_users_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 
-ALTER TABLE widget_configs ADD COLUMN tenant_id INT AFTER id;
-ALTER TABLE widget_configs ADD CONSTRAINT fk_widget_configs_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id);
+-- ALTER TABLE widget_configs ADD COLUMN tenant_id INT AFTER id;
+-- ALTER TABLE widget_configs ADD CONSTRAINT fk_widget_configs_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id);
 
-ALTER TABLE widget_themes ADD COLUMN tenant_id INT AFTER id;
-ALTER TABLE widget_themes ADD CONSTRAINT fk_widget_themes_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id); 
+-- ALTER TABLE widget_themes ADD COLUMN tenant_id INT AFTER id;
+-- ALTER TABLE widget_themes ADD CONSTRAINT fk_widget_themes_tenant FOREIGN KEY (tenant_id) REFERENCES tenants(id); 
