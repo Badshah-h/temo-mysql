@@ -74,11 +74,14 @@ const PromptTemplateList: React.FC<PromptTemplateListProps> = ({
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
+  // Base API URL - update this to match the server route
+  const API_BASE_URL = "/api/promptTemplates";
+
   const fetchTemplates = async () => {
     try {
       setLoading(true);
 
-      let url = `/api/prompt-templates?page=${currentPage}&limit=10&sortBy=${sortBy}&sortOrder=${sortOrder}`;
+      let url = `${API_BASE_URL}?page=${currentPage}&limit=10&sortBy=${sortBy}&sortOrder=${sortOrder}`;
 
       if (searchTerm) {
         url += `&search=${encodeURIComponent(searchTerm)}`;
@@ -116,7 +119,8 @@ const PromptTemplateList: React.FC<PromptTemplateListProps> = ({
 
   const fetchCategories = async () => {
     try {
-      const response = await axios.get("/api/prompt-templates/categories", {
+      // Updated to use the correct API endpoint
+      const response = await axios.get(`${API_BASE_URL}/categories`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -127,18 +131,20 @@ const PromptTemplateList: React.FC<PromptTemplateListProps> = ({
   };
 
   useEffect(() => {
-    fetchTemplates();
-    fetchCategories();
+    if (token) {
+      fetchTemplates();
+      fetchCategories();
+    }
   }, [currentPage, sortBy, sortOrder, token]);
 
   useEffect(() => {
     // Reset to first page when filters change
     if (currentPage !== 1) {
       setCurrentPage(1);
-    } else {
+    } else if (token) {
       fetchTemplates();
     }
-  }, [searchTerm, selectedCategory, showGlobalOnly, showMyTemplates]);
+  }, [searchTerm, selectedCategory, showGlobalOnly, showMyTemplates, token]);
 
   const handleDelete = async (id: number) => {
     if (!window.confirm("Are you sure you want to delete this template?")) {
@@ -146,7 +152,7 @@ const PromptTemplateList: React.FC<PromptTemplateListProps> = ({
     }
 
     try {
-      await axios.delete(`/api/prompt-templates/${id}`, {
+      await axios.delete(`${API_BASE_URL}/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

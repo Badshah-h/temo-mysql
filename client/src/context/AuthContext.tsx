@@ -25,29 +25,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    // Check for token in localStorage on initial load
-    const storedToken = localStorage.getItem("auth_token");
-    if (storedToken) {
-      verifyToken(storedToken)
-        .then((userData) => {
-          if (userData) {
-            setUser(userData);
-            setToken(storedToken);
-          } else {
-            // Token is invalid or expired
+  // Function to load auth state from localStorage
+  const loadAuthState = async () => {
+    setIsLoading(true);
+    try {
+      const storedToken = localStorage.getItem("auth_token");
+      if (storedToken) {
+        // First check if token is valid on client side
+        const userData = await verifyToken(storedToken);
+        if (userData) {
+          // Then verify with server
+          try {
+            const response = await fetch("/api/auth/me", {
+              headers: { Authorization: `Bearer ${storedToken}` },
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              setUser(data.user);
+              setToken(storedToken);
+            } else {
+              throw new Error("Server token verification failed");
+            }
+          } catch (serverError) {
+            console.error("Server verification failed:", serverError);
             localStorage.removeItem("auth_token");
+            setUser(null);
+            setToken(null);
           }
-        })
-        .catch(() => {
+        } else {
+          // Token is invalid or expired
           localStorage.removeItem("auth_token");
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    } else {
+          setUser(null);
+          setToken(null);
+        }
+      } else {
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error("Error loading auth state:", error);
+      localStorage.removeItem("auth_token");
+      setUser(null);
+      setToken(null);
       setIsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    loadAuthState();
+
+    // Add event listener for storage changes (for multi-tab support)
+    window.addEventListener("storage", (event) => {
+      if (event.key === "auth_token") {
+        if (event.newValue) {
+          loadAuthState();
+        } else {
+          // Token was removed in another tab
+          setUser(null);
+          setToken(null);
+        }
+      }
+    });
+
+    return () => {
+      window.removeEventListener("storage", () => {});
+    };
   }, []);
 
   const login = (newToken: string, userData: User) => {

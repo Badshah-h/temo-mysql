@@ -34,7 +34,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/roles", rolesRoutes);
 app.use("/api/permissions", permissionsRoutes);
-app.use("/api/promptTemplates", promptTemplatesRoutes);
+app.use("/api/prompt-templates", promptTemplatesRoutes);
 
 // Protected route example
 app.get("/api/protected", authenticate, (req: Request, res: Response) => {
