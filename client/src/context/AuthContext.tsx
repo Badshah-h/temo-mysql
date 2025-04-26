@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { User, verifyToken } from "../lib/auth";
+import * as React from "react";
+import { User } from "../lib/auth";
 
 interface AuthContextType {
   user: User | null;
@@ -13,23 +13,34 @@ interface AuthContextType {
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Create context with a default value
+const AuthContext = React.createContext<AuthContextType>({
+  user: null,
+  token: null,
+  isAuthenticated: false,
+  isLoading: true,
+  isAdmin: false,
+  hasRole: () => false,
+  hasPermission: () => false,
+  login: () => {},
+  logout: () => {},
+});
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
-}
+// Export the context itself
+export { AuthContext };
+
+// Export the hook as a constant for better HMR compatibility
+export const useAuth = () => {
+  return React.useContext(AuthContext);
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = React.useState<User | null>(null);
+  const [token, setToken] = React.useState<string | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   // Function to load auth state from localStorage
-  const loadAuthState = async () => {
+  const loadAuthState = React.useCallback(async () => {
     setIsLoading(true);
     try {
       const storedToken = localStorage.getItem("auth_token");
@@ -61,13 +72,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => {
+  React.useEffect(() => {
     loadAuthState();
 
     // Add event listener for storage changes (for multi-tab support)
-    window.addEventListener("storage", (event) => {
+    const handleStorageChange = (event: StorageEvent) => {
       if (event.key === "auth_token") {
         if (event.newValue) {
           loadAuthState();
@@ -77,71 +88,84 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setToken(null);
         }
       }
-    });
+    };
+
+    window.addEventListener("storage", handleStorageChange);
 
     return () => {
-      window.removeEventListener("storage", () => {});
+      window.removeEventListener("storage", handleStorageChange);
     };
-  }, []);
+  }, [loadAuthState]);
 
-  const login = (newToken: string, userData: User) => {
+  const login = React.useCallback((newToken: string, userData: User) => {
     localStorage.setItem("auth_token", newToken);
     setToken(newToken);
     setUser(userData);
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = React.useCallback(() => {
     localStorage.removeItem("auth_token");
     setToken(null);
     setUser(null);
-  };
+  }, []);
 
   // Check if user has a specific role
-  const hasRole = (roleName: string): boolean => {
-    if (!user) return false;
+  const hasRole = React.useCallback(
+    (roleName: string): boolean => {
+      if (!user) return false;
 
-    // Check all roles
-    if (user.roles && user.roles.length > 0) {
-      return user.roles.some((role) => role.name === roleName);
-    }
+      // Check all roles
+      if (user.roles && user.roles.length > 0) {
+        return user.roles.some((role) => role.name === roleName);
+      }
 
-    return false;
-  };
+      return false;
+    },
+    [user],
+  );
 
   // Check if user has a specific permission
-  const hasPermission = (permissionName: string): boolean => {
-    if (!user) return false;
+  const hasPermission = React.useCallback(
+    (permissionName: string): boolean => {
+      if (!user) return false;
 
-    // Admin has all permissions
-    if (hasRole("admin")) return true;
+      // Admin has all permissions
+      if (hasRole("admin")) return true;
 
-    // Check direct permissions if available
-    if (user.permissions && user.permissions.length > 0) {
-      return user.permissions.some(
-        (permission) => permission.name === permissionName,
-      );
-    }
+      // Check direct permissions if available
+      if (user.permissions && user.permissions.length > 0) {
+        return user.permissions.some(
+          (permission) => permission.name === permissionName,
+        );
+      }
 
-    return false;
-  };
+      return false;
+    },
+    [user, hasRole],
+  );
 
   const isAdmin = hasRole("admin");
 
-  const value = {
-    user,
-    token,
-    isAuthenticated: !!user,
-    isLoading,
-    isAdmin,
-    hasRole,
-    hasPermission,
-    login,
-    logout,
-  };
+  const contextValue = React.useMemo(
+    () => ({
+      user,
+      token,
+      isAuthenticated: !!user,
+      isLoading,
+      isAdmin,
+      hasRole,
+      hasPermission,
+      login,
+      logout,
+    }),
+    [user, token, isLoading, isAdmin, hasRole, hasPermission, login, logout],
+  );
 
   if (isLoading) {
     return <div>Loading...</div>;
   }
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
+  );
 }
