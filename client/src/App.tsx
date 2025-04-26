@@ -4,6 +4,8 @@ import Home from "./components/home";
 import routes from "tempo-routes";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
+import AdminRoles from "./components/admin/roles/AdminRoles";
+import AdminPermissions from "./components/admin/permissions/AdminPermissions";
 
 // Check if Tempo is enabled
 const isTempo =
