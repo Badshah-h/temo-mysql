@@ -17,7 +17,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
-    allowedHosts: process.env.TEMPO === "true" ? true : true,
+    allowedHosts: process.env.TEMPO === "true" ? true : ["localhost"],
     proxy: {
       "/api": {
         target: "http://localhost:3001",

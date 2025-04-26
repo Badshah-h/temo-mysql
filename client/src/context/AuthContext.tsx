@@ -1,22 +1,26 @@
 import * as React from "react";
 import { User } from "../lib/auth";
+import { Tenant } from "../types/auth";
 
 interface AuthContextType {
   user: User | null;
   token: string | null;
+  tenant: Tenant | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   isAdmin: boolean;
   hasRole: (role: string) => boolean;
   hasPermission: (permission: string) => boolean;
-  login: (token: string, user: User) => void;
+  login: (token: string, user: User, tenant?: Tenant) => void;
   logout: () => void;
+  setCurrentTenant: (tenant: Tenant) => void;
 }
 
 // Create context with a default value
 const AuthContext = React.createContext<AuthContextType>({
   user: null,
   token: null,
+  tenant: null,
   isAuthenticated: false,
   isLoading: true,
   isAdmin: false,
@@ -24,6 +28,7 @@ const AuthContext = React.createContext<AuthContextType>({
   hasPermission: () => false,
   login: () => {},
   logout: () => {},
+  setCurrentTenant: () => {},
 });
 
 // Export the context itself
@@ -37,6 +42,7 @@ export const useAuth = () => {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<User | null>(null);
   const [token, setToken] = React.useState<string | null>(null);
+  const [tenant, setTenant] = React.useState<Tenant | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
 
   // Function to load auth state from localStorage
@@ -44,6 +50,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     try {
       const storedToken = localStorage.getItem("auth_token");
+      const storedTenant = localStorage.getItem("current_tenant");
+
+      if (storedTenant) {
+        try {
+          setTenant(JSON.parse(storedTenant));
+        } catch (e) {
+          console.error("Error parsing stored tenant:", e);
+          localStorage.removeItem("current_tenant");
+        }
+      }
+
       if (storedToken) {
         // Only verify with server
         try {
@@ -55,6 +72,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const data = await response.json();
             setUser(data.user);
             setToken(storedToken);
+
+            // If tenant info is in the response and we don't have it yet
+            if (data.tenant && !tenant) {
+              setTenant(data.tenant);
+              localStorage.setItem(
+                "current_tenant",
+                JSON.stringify(data.tenant),
+              );
+            }
           } else {
             throw new Error("Server token verification failed");
           }
@@ -72,7 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [tenant]);
 
   React.useEffect(() => {
     loadAuthState();
@@ -87,6 +113,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(null);
           setToken(null);
         }
+      } else if (event.key === "current_tenant") {
+        if (event.newValue) {
+          try {
+            setTenant(JSON.parse(event.newValue));
+          } catch (e) {
+            console.error("Error parsing tenant from storage event:", e);
+          }
+        } else {
+          setTenant(null);
+        }
       }
     };
 
@@ -97,16 +133,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [loadAuthState]);
 
-  const login = React.useCallback((newToken: string, userData: User) => {
-    localStorage.setItem("auth_token", newToken);
-    setToken(newToken);
-    setUser(userData);
-  }, []);
+  const login = React.useCallback(
+    (newToken: string, userData: User, tenantData?: Tenant) => {
+      localStorage.setItem("auth_token", newToken);
+      setToken(newToken);
+      setUser(userData);
+
+      if (tenantData) {
+        setTenant(tenantData);
+        localStorage.setItem("current_tenant", JSON.stringify(tenantData));
+      } else if (userData.tenant) {
+        setTenant(userData.tenant);
+        localStorage.setItem("current_tenant", JSON.stringify(userData.tenant));
+      }
+    },
+    [],
+  );
 
   const logout = React.useCallback(() => {
     localStorage.removeItem("auth_token");
+    localStorage.removeItem("current_tenant");
     setToken(null);
     setUser(null);
+    setTenant(null);
+  }, []);
+
+  const setCurrentTenant = React.useCallback((tenantData: Tenant) => {
+    setTenant(tenantData);
+    localStorage.setItem("current_tenant", JSON.stringify(tenantData));
   }, []);
 
   // Check if user has a specific role
@@ -150,6 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     () => ({
       user,
       token,
+      tenant,
       isAuthenticated: !!user,
       isLoading,
       isAdmin,
@@ -157,12 +212,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       hasPermission,
       login,
       logout,
+      setCurrentTenant,
     }),
-    [user, token, isLoading, isAdmin, hasRole, hasPermission, login, logout],
+    [
+      user,
+      token,
+      tenant,
+      isLoading,
+      isAdmin,
+      hasRole,
+      hasPermission,
+      login,
+      logout,
+      setCurrentTenant,
+    ],
   );
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   return (

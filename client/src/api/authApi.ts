@@ -1,5 +1,5 @@
 import axios from "axios";
-import { User } from "../types/auth";
+import { User, Tenant } from "../types/auth";
 
 // Create an axios instance with base URL
 const api = axios.create({
@@ -15,14 +15,32 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
+  // Add tenant header if available
+  const tenantData = localStorage.getItem("current_tenant");
+  if (tenantData) {
+    try {
+      const tenant = JSON.parse(tenantData);
+      if (tenant && tenant.slug) {
+        config.headers["X-Tenant"] = tenant.slug;
+      }
+    } catch (e) {
+      console.error("Error parsing tenant data for request header:", e);
+    }
+  }
+
   return config;
 });
 
 // Auth API endpoints
 export const authApi = {
-  login: async (email: string, password: string) => {
+  login: async (email: string, password: string, tenantSlug?: string) => {
     try {
-      const response = await api.post("/auth/login", { email, password });
+      const response = await api.post("/auth/login", {
+        email,
+        password,
+        tenantSlug: tenantSlug || "default",
+      });
       return response.data;
     } catch (error) {
       throw error;
@@ -33,6 +51,7 @@ export const authApi = {
     fullName: string,
     email: string,
     password: string,
+    tenantSlug?: string,
     role?: string,
   ) => {
     try {
@@ -40,6 +59,7 @@ export const authApi = {
         fullName,
         email,
         password,
+        tenantSlug: tenantSlug || "default",
         role, // Optional role parameter
       });
       return response.data;
@@ -52,10 +72,12 @@ export const authApi = {
     try {
       await api.post("/auth/logout");
       localStorage.removeItem("auth_token");
+      localStorage.removeItem("current_tenant");
     } catch (error) {
       console.error("Logout error:", error);
       // Still remove the token even if the API call fails
       localStorage.removeItem("auth_token");
+      localStorage.removeItem("current_tenant");
     }
   },
 
@@ -68,7 +90,7 @@ export const authApi = {
     }
   },
 
-  getCurrentUser: async (): Promise<{ user: User }> => {
+  getCurrentUser: async (): Promise<{ user: User; tenant: Tenant }> => {
     try {
       const response = await api.get("/auth/me");
       return response.data;
@@ -111,6 +133,50 @@ export const authApi = {
   getTenants: async () => {
     try {
       const response = await api.get("/tenants");
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Create a new tenant
+  createTenant: async (tenantData: {
+    name: string;
+    slug: string;
+    logoUrl?: string;
+    primaryColor?: string;
+    secondaryColor?: string;
+  }) => {
+    try {
+      const response = await api.post("/tenants", tenantData);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Update tenant
+  updateTenant: async (
+    tenantId: number,
+    tenantData: {
+      name?: string;
+      logoUrl?: string;
+      primaryColor?: string;
+      secondaryColor?: string;
+    },
+  ) => {
+    try {
+      const response = await api.put(`/tenants/${tenantId}`, tenantData);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  // Get tenant by slug
+  getTenantBySlug: async (slug: string) => {
+    try {
+      const response = await api.get(`/tenants/by-slug/${slug}`);
       return response.data;
     } catch (error) {
       throw error;
