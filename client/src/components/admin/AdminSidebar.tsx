@@ -14,6 +14,7 @@ import {
   BookOpen,
   BrainCircuit,
   LogOut,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";

@@ -68,7 +68,7 @@ const AdminRoles: React.FC = () => {
           <RoleDetail
             roleId={selectedRole.id}
             onBack={handleBack}
-            onEdit={handleEdit}
+            onEdit={() => handleEdit(selectedRole)}
           />
         )}
       </div>

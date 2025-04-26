@@ -24,6 +24,10 @@ const AdminEmbedCode = lazy(
 const AdminTemplates = lazy(
   () => import("./components/admin/templates/AdminTemplates"),
 );
+const AdminRoles = lazy(() => import("./components/admin/roles/AdminRoles"));
+const AdminPermissions = lazy(
+  () => import("./components/admin/permissions/AdminPermissions"),
+);
 const LoginForm = lazy(() => import("./components/auth/LoginForm"));
 const RegisterForm = lazy(() => import("./components/auth/RegisterForm"));
 const UnauthorizedPage = lazy(
