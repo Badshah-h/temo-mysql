@@ -1,9 +1,10 @@
-// Database setup script
-import fs from "fs";
+// Database setup script using Knex
 import path from "path";
 import { fileURLToPath } from "url";
 import mysql from "mysql2/promise";
 import dotenv from "dotenv";
+import knex from "knex";
+import { spawn } from "child_process";
 
 // Get the directory name in ESM
 const __filename = fileURLToPath(import.meta.url);
@@ -19,15 +20,15 @@ async function setupDatabase() {
   console.log(`User: ${process.env.DB_USER || "root"}`);
   console.log(`Database: ${process.env.DB_NAME || "chat_widget_db"}`);
 
-  // Create connection to MySQL server (without database)
-  const connection = await mysql.createConnection({
-    host: process.env.DB_HOST || "localhost",
-    port: parseInt(process.env.DB_PORT || "3306", 10),
-    user: process.env.DB_USER || "root",
-    password: process.env.DB_PASSWORD || "",
-  });
-
   try {
+    // Create connection to MySQL server (without database)
+    const connection = await mysql.createConnection({
+      host: process.env.DB_HOST || "localhost",
+      port: parseInt(process.env.DB_PORT || "3306", 10),
+      user: process.env.DB_USER || "root",
+      password: process.env.DB_PASSWORD || "",
+    });
+
     // Create database if it doesn't exist
     const dbName = process.env.DB_NAME || "chat_widget_db";
     await connection.query(
@@ -35,69 +36,42 @@ async function setupDatabase() {
     );
     console.log(`Database ${dbName} created or already exists`);
 
-    // Use the database
-    await connection.query(`USE ${dbName}`);
+    // Close the direct MySQL connection
+    await connection.end();
 
-    // Get all migration files in order
-    const migrationsDir = path.join(__dirname, "../db/migrations");
-    
-    // Check if migrations directory exists
-    if (!fs.existsSync(migrationsDir)) {
-      console.log(`Migrations directory not found at ${migrationsDir}`);
-      console.log("Creating migrations directory...");
-      fs.mkdirSync(migrationsDir, { recursive: true });
-    }
-    
-    const migrationFiles = fs
-      .readdirSync(migrationsDir)
-      .filter((file) => file.endsWith(".sql"))
-      .sort();
+    // Now run migrations using Knex
+    console.log("Running migrations with Knex...");
 
-    if (migrationFiles.length === 0) {
-      console.log("No migration files found. Creating initial schema...");
-      
-      // Create initial schema if no migration files exist
-      await connection.query(`
-        CREATE TABLE IF NOT EXISTS users (
-          id INT AUTO_INCREMENT PRIMARY KEY,
-          email VARCHAR(255) NOT NULL UNIQUE,
-          password VARCHAR(255) NOT NULL,
-          full_name VARCHAR(255) NOT NULL,
-          role ENUM('admin', 'user', 'moderator') NOT NULL DEFAULT 'user',
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-          last_login TIMESTAMP NULL,
-          is_active BOOLEAN DEFAULT TRUE,
-          INDEX idx_email (email),
-          INDEX idx_role (role)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-      `);
-      
-      console.log("Initial schema created successfully");
+    // Import knexfile configuration
+    const { default: knexConfig } = await import("../db/knexfile.js");
+
+    // Create Knex instance with the development configuration
+    const environment = process.env.NODE_ENV || "development";
+    const db = knex(knexConfig[environment]);
+
+    console.log(`Using environment: ${environment}`);
+    console.log(
+      `Migration directory: ${knexConfig[environment].migrations.directory}`,
+    );
+
+    // Run migrations
+    console.log("Running latest migrations...");
+    const [batchNo, log] = await db.migrate.latest();
+
+    if (log.length === 0) {
+      console.log("Already up to date");
     } else {
-      // Execute each migration file
-      for (const file of migrationFiles) {
-        console.log(`Applying migration: ${file}`);
-        const filePath = path.join(migrationsDir, file);
-        const sql = fs.readFileSync(filePath, "utf8");
-
-        // Split SQL statements by semicolon and execute each one
-        const statements = sql.split(";").filter((stmt) => stmt.trim());
-
-        for (const statement of statements) {
-          if (statement.trim()) {
-            await connection.query(statement);
-          }
-        }
-      }
+      console.log(`Batch ${batchNo} run: ${log.length} migrations`);
+      console.log(`Migrations: ${log.join(", ")}`);
     }
+
+    // Close the database connection
+    await db.destroy();
 
     console.log("Database schema setup completed successfully");
   } catch (error) {
     console.error("Error setting up database:", error);
     throw error;
-  } finally {
-    await connection.end();
   }
 }
 

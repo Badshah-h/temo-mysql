@@ -1,2 +1,0 @@
--- Migration: 006_remove_role_column.sql
--- The role column has already been removed from the users table. No further action is required.

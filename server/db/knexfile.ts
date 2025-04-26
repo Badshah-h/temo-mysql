@@ -53,7 +53,7 @@ const config: KnexConfig = {
     },
     migrations: {
       tableName: "knex_migrations",
-      directory: path.join(__dirname, "migrations"),
+      directory: path.join(__dirname, "migrations-ts"),
     },
     seeds: {
       directory: path.join(__dirname, "seeds"),
